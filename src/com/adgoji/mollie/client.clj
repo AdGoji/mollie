@@ -13,7 +13,7 @@
 (def ^:private default-base-url "https://api.mollie.com")
 
 (defn new-client
-  [{:keys [base-url api-key partner-id profile-id check-response]
+  [{:keys [base-url api-key check-response]
     :or   {base-url       default-base-url
            check-response false}}]
   {:client         (hc/build-http-client
@@ -21,8 +21,6 @@
                       :redirect-policy :always})
    :base-url       base-url
    :api-key        api-key
-   :partner-id     partner-id
-   :profile-id     profile-id
    :check-response check-response})
 
 (defn- parse-json
@@ -69,7 +67,6 @@
   (let [new-query-params (cond-> {}
                            (seq query-params) (into query-params)
                            (seq page-params)  (into page-params))]
-    #_{:clj-kondo/ignore [:unresolved-symbol]}
     (http-get client endpoint (assoc opts :query-params new-query-params))))
 
 (defn extract-page-params
