@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - '**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: DeLaGuardo/setup-clojure@master
+        with:
+          cli: 'latest'
+          bb: 'latest'
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Deploy
+        env:
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+        run: bb deploy:clojars

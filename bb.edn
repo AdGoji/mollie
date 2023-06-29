@@ -1,0 +1,43 @@
+{:paths ["scripts"]
+
+ :tasks
+ {:requires
+  ([core])
+
+  test
+  {:doc  "Run unit tests"
+   :task (clojure "-M:test")}
+
+  install-git-hooks
+  {:doc  "Install required Git pre-commit hooks"
+   :task core/setup-git-hooks}
+
+  lint
+  {:doc  "Lint the code with clj-kondo"
+   :task (core/clj-kondo "src" "spec" "test")}
+
+  format:check
+  {:doc  "Check the formatting of the code-base"
+   :task (core/cljfmt "check")}
+
+  format:fix
+  {:doc  "Fix the formatting"
+   :task (core/cljfmt "fix")}
+
+  build:clean
+  {:doc  "Remove target directory"
+   :task (clojure "-T:build" "clean")}
+
+  build:jar
+  {:doc     "Build library jar"
+   :depends [build:clean]
+   :task    (clojure "-T:build" "jar")}
+
+  release
+  {:doc  "Create a new tag with release version"
+   :task (clojure "-T:build" "release")}
+
+  deploy:clojars
+  {:doc     "Deploy library to clojars"
+   :depends [build:jar]
+   :task    (clojure "-T:build" "deploy")}}}
