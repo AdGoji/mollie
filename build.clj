@@ -4,7 +4,7 @@
    [deps-deploy.deps-deploy :as dd]))
 
 (def lib 'com.adgoji/mollie)
-(def version (format "0.1.%s" (b/git-count-revs nil)))
+(def version "0.1.4")
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/%s-%s.jar" (name lib) version))
@@ -26,7 +26,7 @@
                             :developerConnection (str "scm:git:ssh://git@github.com:adgoji/mollie.git")
                             :url                 "https://github.com/adgoji/mollie"}})
   (println "Copy sources and resources")
-  (b/copy-dir {:src-dirs   ["src"]
+  (b/copy-dir {:src-dirs   ["src" "spec"]
                :target-dir class-dir})
   (println "Build jar")
   (b/jar {:class-dir class-dir
