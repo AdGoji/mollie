@@ -22,14 +22,38 @@
 ;;;; API client
 
 (defn new-client
-  "Create a new Mollie API client."
+  "Create a new Mollie API client.
+
+  Parameters:
+  - `:api-key` required. Can be obtained from Mollie dashboard.
+  - `:base-url` optionally override base URL for Mollie API.
+  - `:check-response` optional (default `false`). If `true`, all
+    responses will be additionally checked against spec. An error
+    will be thrown if response doesn't conform to a spec.
+
+  Example:
+  ```clojure
+  (def mollie-client
+    (mollie.api/new-client
+      {:api-key \"string\"
+       :base-url \"https://api.mollie.com\"
+       :check-response true}))
+  ```"
   [params]
   (client/new-client params))
 
 ;;;; Customers
 
 (defn create-customer
-  "Create a new Mollie customer."
+  "Create a new Mollie customer.
+
+  Customer can be used for Mollie checkout and recurring features. All
+  customer keys are optional.
+
+  Example:
+  ```clojure
+  (mollie.api/create-customer mollie-client {})
+  ```"
   [client customer]
   (customers/create client customer))
 
@@ -93,7 +117,47 @@
   customer by providing `customer-id` in the request body (Mollie
   returns an error that payment method is not enabled), but it can be
   created without any issues by providing `customer-id` as a path
-  parameter (second arity)."
+  parameter (second arity).
+
+  Examples:
+
+  - create one-off payment
+
+  ```clojure
+  (mollie.api/create-payment
+    mollie-client
+    {:amount
+      {:value 100.00M
+       :currency \"EUR\"}
+     :description \"Mollie one-off payment\"
+     :redirect-url \"https://example.com\"})
+  ```
+
+  - create first payment (customer is required)
+
+  ```clojure
+  (mollie.api/create-payment
+    mollie-client
+    {:amount
+      {:value 100.00M
+       :currency \"EUR\"}
+     :description \"First payment to start a subscription\"
+     :sequence-type :first
+     :redirect-url \"https://example.com\"
+     :customer-id \"cus_123\"})
+  ```
+
+  - create recurring payment (mandate is required)
+
+  ```clojure
+  (mollie.api/create-payment
+    mollie-client
+    {:amount
+      {:value 100.00M
+       :currency \"EUR\"}
+     :description \"Next subscription payment\"
+     :sequence-type :recurring})
+  ```"
   ([client payment]
    (payments/create client payment))
   ([client payment customer-id]
@@ -174,7 +238,26 @@
 ;;;; Mandates
 
 (defn create-mandate
-  "Create a new mandate for a given `customer-id`."
+  "Create a new mandate for a given `customer-id`.
+
+  A mandate essentially symbolizes the authorization a customer gave
+  you to recurrently charge their card or bank account.
+
+  Example:
+  ```clojure
+  (mollie.api/create-mandate
+    mollie-client
+    {:method :directdebit
+     :consumer-name \"Test Customer\"
+     :consumer-account \"NL55INGB0000000000\"})
+  ```
+
+  Creating a mandate explicitly is not strictly required to process
+  recurring payments. In basic implementations it suffices
+  to [[create-customer]], do a first payment with the customer, and
+  then charge recurring payments on the customer. A mandate is created
+  automatically for the first payment, and that mandate is
+  automatically used for any consecutive recurring payments."
   [client customer-id mandate]
   (mandates/create client customer-id mandate))
 
@@ -221,7 +304,21 @@
 ;;;; Subscriptions
 
 (defn create-subscription
-  "Create a new subscription for a given `customer-id`."
+  "Create a new subscription for a given `customer-id`.
+
+  Subscription description should be unique.
+
+  Example:
+  ```clojure
+  (let [description (str \"Test subscription\" (random-uuid))]
+    (mollie.api/create-subscription
+      mollie-client
+      {:amount
+        {:value 100.00M
+         :currency \"EUR\"}
+       :interval \"1 months\"
+       :description description}))
+  ```"
   [client customer-id subscription]
   (subscriptions/create client customer-id subscription))
 
@@ -266,6 +363,10 @@
   :ret ::mollie/subscription)
 
 (defn get-subscriptions-list
+  "Fetch a list of subscriptions.
+
+  If `customer-id` is omitted, fetch all subscriptions for all
+  customers."
   ([client opts]
    (subscriptions/get-list client opts))
   ([client customer-id opts]
