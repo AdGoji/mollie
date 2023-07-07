@@ -4,9 +4,9 @@
    [clojure.data.json :as json]
    [clojure.java.io :as io]
    [clojure.string :as str]
-   [hato.client :as hc]
    [com.adgoji.mollie.pagination :as pagination]
-   [com.adgoji.utils.spec :as spec])
+   [com.adgoji.utils.spec :as spec]
+   [hato.client :as hc])
   (:import
    (java.net URI URISyntaxException)))
 

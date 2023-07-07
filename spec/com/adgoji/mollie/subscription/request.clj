@@ -21,45 +21,24 @@
   (s/keys :req-un [::amount ::description]))
 
 (s/def ::create
-  (s/merge (s/keys :req-un [::amount
-                            ::interval
-                            ::description]
-                   :opt-un [::times
-                            ::start-date
-                            ::method
-                            ::mandate-id
-                            ::webhook-url
-                            ::metadata
-                            ::profile-id
-                            ::application-fee])
-           (s/map-of #{:amount
-                       :interval
-                       :description
-                       :times
-                       :start-date
-                       :method
-                       :mandate-id
-                       :webhook-url
-                       :metadata
-                       :profile-id
-                       :application-fee}
-                     any?)))
+  (common/only-keys :req-un [::amount
+                             ::interval
+                             ::description]
+                    :opt-un [::times
+                             ::start-date
+                             ::method
+                             ::mandate-id
+                             ::webhook-url
+                             ::metadata
+                             ::profile-id
+                             ::application-fee]))
 
 (s/def ::update
-  (s/merge (s/keys :opt-un [::amount
-                            ::description
-                            ::interval
-                            ::mandate-id
-                            ::metadata
-                            ::start-date
-                            ::times
-                            ::webhook-url])
-           (s/map-of #{:amount
-                       :description
-                       :interval
-                       :mandate-id
-                       :metadata
-                       :start-date
-                       :times
-                       :webhook-url}
-                     any?)))
+  (common/only-keys :opt-un [::amount
+                             ::description
+                             ::interval
+                             ::mandate-id
+                             ::metadata
+                             ::start-date
+                             ::times
+                             ::webhook-url]))

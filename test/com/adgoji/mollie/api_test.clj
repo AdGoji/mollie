@@ -2,9 +2,9 @@
   (:require
    [clojure.edn :as edn]
    [clojure.test :refer [deftest is testing]]
-   [com.adgoji.mollie.api :as sut]
    [com.adgoji.mollie :as mollie]
    [com.adgoji.mollie.amount :as amount]
+   [com.adgoji.mollie.api :as sut]
    [com.adgoji.mollie.customer :as customer]
    [com.adgoji.mollie.directdebit :as directdebit]
    [com.adgoji.mollie.link :as link]
@@ -28,19 +28,13 @@
   (or (System/getenv "MOLLIE_API_KEY")
       (:api-key secrets)))
 
-(def ^:private partner-id
-  (or (System/getenv "MOLLIE_PARTNER_ID")
-      (:partner-id secrets)))
-
 (def ^:private profile-id
   (or (System/getenv "MOLLIE_PROFILE_ID")
       (:profile-id secrets)))
 
 (defn- new-client []
   (sut/new-client {:api-key        api-key
-                   :partner-id     partner-id
-                   :profile-id     profile-id
-                   :check-response false}))
+                   :check-response true}))
 
 (defn- ensure-customer []
   (if-let [customers (->> (sut/get-customers-list (new-client) {})
@@ -247,8 +241,7 @@
                                                 :currency amount-currency}
                                                :description  description
                                                :redirect-url redirect-url})]
-      (is (= {::payment/details       nil
-              ::payment/description   description
+      (is (= {::payment/description   description
               ::payment/resource      "payment"
               ::payment/profile-id    profile-id
               ::link/documentation
@@ -282,8 +275,7 @@
                                                :description  description
                                                :redirect-url redirect-url
                                                :method       :ideal})]
-      (is (= {::payment/details       nil
-              ::payment/description   description
+      (is (= {::payment/description   description
               ::payment/resource      "payment"
               ::payment/profile-id    profile-id
               ::link/documentation
@@ -321,8 +313,7 @@
                                                :sequence-type sequence-type
                                                :redirect-url  redirect-url
                                                :customer-id   customer-id})]
-      (is (= {::payment/details       nil
-              ::payment/description   description
+      (is (= {::payment/description   description
               ::payment/resource      "payment"
               ::payment/profile-id    profile-id
               ::link/documentation
@@ -360,8 +351,7 @@
                                                :description  description
                                                :redirect-url redirect-url}
                                               customer-id)]
-      (is (= {::payment/details       nil
-              ::payment/description   description
+      (is (= {::payment/description   description
               ::payment/resource      "payment"
               ::payment/profile-id    profile-id
               ::link/documentation
@@ -376,6 +366,46 @@
               ::payment/redirect-url  redirect-url
               ::payment/status        :open
               ::payment/sequence-type :oneoff
+              ::payment/customer-id   customer-id}
+             (dissoc payment
+                     ::payment/id
+                     ::payment/created-at
+                     ::payment/expires-at
+                     ::link/dashboard
+                     ::link/self
+                     ::link/checkout)))))
+
+  (testing "Create a first recurring payment for a customer (arity one)"
+    (let [customer        (ensure-customer-without-mandate)
+          amount-value    0.01M
+          amount-currency "EUR"
+          description     "Start new subscription test"
+          sequence-type   :first
+          redirect-url    "https://example.com"
+          customer-id     (::customer/id customer)
+          payment         (sut/create-payment (new-client)
+                                              {:amount
+                                               {:value    amount-value
+                                                :currency amount-currency}
+                                               :description   description
+                                               :sequence-type sequence-type
+                                               :redirect-url  redirect-url
+                                               :customer-id   customer-id})]
+      (is (= {::payment/description   description
+              ::payment/resource      "payment"
+              ::payment/profile-id    profile-id
+              ::link/documentation
+              {::link/type "text/html"
+               ::link/href "https://docs.mollie.com/reference/v2/payments-api/create-payment"}
+              ::link/customer         (::link/self customer)
+              ::payment/mode          :test
+              ::payment/method        nil
+              ::payment/amount
+              {::amount/value    amount-value
+               ::amount/currency amount-currency}
+              ::payment/redirect-url  redirect-url
+              ::payment/status        :open
+              ::payment/sequence-type :first
               ::payment/customer-id   customer-id}
              (dissoc payment
                      ::payment/id
@@ -401,8 +431,7 @@
                                                :sequence-type sequence-type
                                                :redirect-url  redirect-url}
                                               customer-id)]
-      (is (= {::payment/details       nil
-              ::payment/description   description
+      (is (= {::payment/description   description
               ::payment/resource      "payment"
               ::payment/profile-id    profile-id
               ::link/documentation
@@ -444,43 +473,34 @@
       (is (= {::payment/settlement-amount
               {::amount/value    amount-value
                ::amount/currency amount-currency}
-              ::payment/sequence-type sequence-type
-              ::payment/details
-              {::directdebit/consumer-name    (-> mandate
-                                                  ::mandate/details
-                                                  ::directdebit/consumer-name)
-               ::directdebit/consumer-account (-> mandate
-                                                  ::mandate/details
-                                                  ::directdebit/consumer-account)
-               ::directdebit/consumer-bic     (-> mandate
-                                                  ::mandate/details
-                                                  ::directdebit/consumer-bic)}
-              ::link/customer         (::link/self customer)
-              ::payment/description   "Charge directly"
-              ::payment/customer-id   customer-id
-              ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
-              ::payment/is-cancelable true
+              ::payment/sequence-type        sequence-type
+              ::directdebit/consumer-name    (::directdebit/consumer-name mandate)
+              ::directdebit/consumer-account (::directdebit/consumer-account mandate)
+              ::directdebit/consumer-bic     (::directdebit/consumer-bic mandate)
+              ::link/customer                (::link/self customer)
+              ::payment/description          "Charge directly"
+              ::payment/customer-id          customer-id
+              ::payment/resource             "payment"
+              ::payment/profile-id           profile-id
+              ::payment/is-cancelable        true
               ::link/documentation
               {::link/type "text/html"
                ::link/href "https://docs.mollie.com/reference/v2/customers-api/create-customer-payment"}
-              ::payment/mode    :test
-              ::payment/method  :directdebit
+              ::payment/mode                 :test
+              ::payment/method               :directdebit
               ::payment/amount
               {::amount/value    amount-value
                ::amount/currency amount-currency}
-              ::link/mandate          nil
-              ::payment/redirect-url  nil
-              ::payment/status        :pending
-              ::payment/mandate-id    (::mandate/id mandate)}
+              ::link/mandate                 nil
+              ::payment/redirect-url         nil
+              ::payment/status               :pending
+              ::payment/mandate-id           (::mandate/id mandate)}
              (-> payment
                  (dissoc ::payment/id
                          ::payment/created-at
                          ::link/self
                          ::link/dashboard
-                         ::link/change-payment-state)
-                 (update ::payment/details
-                         dissoc
+                         ::link/change-payment-state
                          ::directdebit/transfer-reference
                          ::directdebit/creditor-identifier
                          ::directdebit/due-date
@@ -578,10 +598,9 @@
       (is (= {::mandate/mandate-reference nil,
               ::link/customer             (::link/self customer)
               ::mandate/signature-date    (LocalDate/now)
-              ::mandate/details
-              {::directdebit/consumer-account "NL55INGB0000000000"
-               ::directdebit/consumer-name    "Test Consumer"
-               ::directdebit/consumer-bic     "INGBNL2A"}
+              ::directdebit/consumer-account "NL55INGB0000000000"
+              ::directdebit/consumer-name    "Test Consumer"
+              ::directdebit/consumer-bic     "INGBNL2A"
               ::mandate/resource          "mandate"
               ::mandate/method            :directdebit
               ::link/documentation
@@ -674,15 +693,13 @@
                                                :currency "EUR"}
                                               :interval    "1 months"
                                               :description description})]
-    (is (= {::subscription/times             nil
-            ::subscription/status            :active
+    (is (= {::subscription/status            :active
             ::link/customer                  (::link/self customer)
             ::subscription/start-date        (LocalDate/now)
             ::subscription/resource          "subscription"
             ::subscription/amount            {::amount/value 10.00M ::amount/currency "EUR"}
             ::subscription/description       description
             ::subscription/interval          "1 month"
-            ::subscription/times-remaining   nil
             ::link/documentation
             {::link/type "text/html"
              ::link/href "https://docs.mollie.com/reference/v2/subscriptions-api/create-subscription"}
