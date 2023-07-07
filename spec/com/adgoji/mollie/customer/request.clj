@@ -8,13 +8,8 @@
 (s/def ::locale ::common/locale)
 (s/def ::metadata ::common/metadata)
 (s/def ::create
-  (s/merge (s/keys :opt-un [::name
-                            ::email
-                            ::locale
-                            ::metadata])
-           (s/map-of #{:name
-                       :email
-                       :locale
-                       :metadata}
-                     any?)))
+  (common/only-keys :opt-un [::name
+                             ::email
+                             ::locale
+                             ::metadata]))
 (s/def ::update ::create)

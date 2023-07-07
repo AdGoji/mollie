@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.2.0] - 2022-06-07 ##
+
+### Fixed ###
+
+- Spec error during fetching all entities with pagination ([#7](https://github.com/AdGoji/mollie/issues/7)).
+
+### Changed ###
+
+- Response format for mandates and payments. Nested `details` map was
+  brought to the top level with different namespace.
+
 ## [0.1.4] - 2023-06-05 ##
 
 ### Added ###
@@ -26,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.1.4..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.2.0..HEAD
+[0.2.0]: https://github.com/AdGoji/mollie/compare/0.1.4..0.2.0
 [0.1.4]: https://github.com/AdGoji/mollie/compare/0.1.3..0.1.4
 [0.1.3]: https://github.com/AdGoji/mollie/releases/tag/0.1.3

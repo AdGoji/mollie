@@ -5,7 +5,18 @@
 ;;; Constants
 
 (def ^:private email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
-(def interval-regex #"^\d+\s(months|weeks|days)")
+(def interval-regex #"^\d+\s(months*|weeks*|days*)")
+
+;;; Helpers
+
+(defmacro only-keys
+  [& {:keys [req req-un opt opt-un] :as args}]
+  `(s/merge (s/map-of ~(set (concat req
+                                    (map (comp keyword name) req-un)
+                                    opt
+                                    (map (comp keyword name) opt-un)))
+                      any?)
+            (s/keys ~@(apply concat (vec args)))))
 
 ;;; Common
 

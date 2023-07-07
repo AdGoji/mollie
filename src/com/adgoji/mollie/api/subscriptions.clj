@@ -1,6 +1,5 @@
 (ns com.adgoji.mollie.api.subscriptions
   (:require
-   [clojure.spec.alpha :as s]
    [com.adgoji.mollie :as mollie]
    [com.adgoji.mollie.client :as mollie.client]
    [com.adgoji.mollie.customer :as customer]
@@ -32,21 +31,21 @@
            webhook-url
            metadata
            links]}]
-  (cond-> {::subscription/resource        resource
-           ::subscription/id              id
-           ::subscription/mode            (keyword mode)
-           ::subscription/created-at      (Instant/parse created-at)
-           ::subscription/status          (keyword status)
-           ::subscription/amount          (spec/qualify-amount amount)
-           ::subscription/times           times
-           ::subscription/times-remaining times-remaining
-           ::subscription/interval        interval
-           ::subscription/start-date      (LocalDate/parse start-date)
-           ::subscription/description     description
-           ::subscription/method          (keyword method)
-           ::link/self                    (spec/qualify-link (:self links))
-           ::link/customer                (spec/qualify-link (:customer links))}
+  (cond-> {::subscription/resource    resource
+           ::subscription/id          id
+           ::subscription/mode        (keyword mode)
+           ::subscription/created-at  (Instant/parse created-at)
+           ::subscription/status      (keyword status)
+           ::subscription/amount      (spec/qualify-amount amount)
+           ::subscription/interval    interval
+           ::subscription/start-date  (LocalDate/parse start-date)
+           ::subscription/description description
+           ::subscription/method      (keyword method)
+           ::link/self                (spec/qualify-link (:self links))
+           ::link/customer            (spec/qualify-link (:customer links))}
     next-payment-date      (assoc ::subscription/next-payment-date (LocalDate/parse next-payment-date))
+    times                  (assoc ::subscription/times times)
+    times-remaining        (assoc ::subscription/times-remaining times-remaining)
     mandate-id             (assoc ::subscription/mandate-id mandate-id)
     canceled-at            (assoc ::subscription/canceled-at (Instant/parse canceled-at))
     webhook-url            (assoc ::subscription/webhook-url webhook-url)
@@ -58,11 +57,12 @@
 (defn create
   "Create a new subscription for given `customer-id`."
   [client customer-id subscription]
-  {:pre [(s/valid? ::customer/id customer-id)
-         (s/valid? ::subscription.request/create subscription)]}
-  (let [body (update-in subscription [:amount :value] decimal/format)]
+  (let [body (-> subscription
+                 (spec/check ::subscription.request/create)
+                 (update-in [:amount :value] decimal/format))]
     (mollie.client/http-post client
-                             (format "/v2/customers/%s/subscriptions" customer-id)
+                             (format "/v2/customers/%s/subscriptions"
+                                     (spec/check customer-id ::customer/id))
                              {:body                 body
                               :response-transformer transform-subscription
                               :spec                 ::mollie/subscription})))
@@ -70,27 +70,23 @@
 (defn get-by-id
   "Fetch a single customer's subscription by `subscription-id`."
   [client customer-id subscription-id]
-  {:pre [(s/valid? ::customer/id customer-id)
-         (s/valid? ::subscription/id subscription-id)]}
   (mollie.client/http-get client
                           (format "/v2/customers/%s/subscriptions/%s"
-                                  customer-id
-                                  subscription-id)
+                                  (spec/check customer-id ::customer/id)
+                                  (spec/check subscription-id ::subscription/id))
                           {:response-transformer transform-subscription
                            :spec                 ::mollie/subscription}))
 
 (defn update-by-id
   "Update a single customer's subscription by `subscription-id`."
   [client customer-id subscription-id data]
-  {:pre [(s/valid? ::customer/id customer-id)
-         (s/valid? ::subscription/id subscription-id)
-         (s/valid? ::subscription.request/update data)]}
   (let [body (cond-> data
-               (:amount data) (update-in [:amount :valud] decimal/format))]
+               (:amount data) (update-in [:amount :valud] decimal/format)
+               :always        (spec/check ::subscription.request/update))]
     (mollie.client/http-patch client
                               (format "/v2/customers/%s/subscriptions/%s"
-                                      customer-id
-                                      subscription-id)
+                                      (spec/check customer-id ::customer/id)
+                                      (spec/check subscription-id ::subscription/id))
                               {:body                 body
                                :response-transformer transform-subscription
                                :spec                 ::mollie/subscription})))
@@ -98,12 +94,10 @@
 (defn cancel-by-id
   "Cancel a single customer's subscription by `subscription-id`."
   [client customer-id subscription-id]
-  {:pre [(s/valid? ::customer/id customer-id)
-         (s/valid? ::subscription/id subscription-id)]}
   (mollie.client/http-delete client
                              (format "/v2/customers/%s/subscriptions/%s"
-                                     customer-id
-                                     subscription-id)
+                                     (spec/check customer-id ::customer/id)
+                                     (spec/check subscription-id ::subscription/id))
                              {:response-transformer transform-subscription
                               :spec                 ::mollie/subscription}))
 
@@ -139,11 +133,11 @@
 (defn get-list
   "Get all subscriptions."
   ([client opts]
-   {:pre [(s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
-   (get-list-generic client "/v2/subscriptions" opts))
-  ([client customer-id opts]
-   {:pre [(s/valid? ::customer/id customer-id)
-          (s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
    (get-list-generic client
-                     (format "/v2/customers/%s/subscriptions" customer-id)
-                     opts)))
+                     "/v2/subscriptions"
+                     (spec/check opts ::pagination/opts)))
+  ([client customer-id opts]
+   (get-list-generic client
+                     (format "/v2/customers/%s/subscriptions"
+                             (spec/check customer-id ::customer/id))
+                     (spec/check opts ::pagination/opts))))

@@ -14,8 +14,19 @@
 (s/def ::cancel-url string?)
 (s/def ::webhook-url string?)
 (s/def ::locale ::common/locale)
-(s/def ::method (s/or :single ::common/payment-method
-                      :list (s/coll-of ::common/payment-method :distinct true :into [])))
+
+(defmulti method-spec type)
+
+(defmethod method-spec clojure.lang.Keyword
+  [_]
+  ::common/payment-method)
+
+(defmethod method-spec clojure.lang.PersistentVector
+  [_]
+  (s/coll-of ::common/payment-method :distinct true :into []))
+
+(s/def ::method (s/multi-spec method-spec :method-data-type))
+
 (s/def ::restrict-payment-methods-to-country string?)
 (s/def ::metadata map?)
 (s/def ::sequence-type #{:oneoff :first :recurring})
@@ -27,103 +38,81 @@
 (s/def ::due-date (partial instance? LocalDate))
 
 (s/def ::create-oneoff
-  (s/keys :req-un [::amount
-                   ::description
-                   ::redirect-url]
-          :opt-un [::cancel-url
-                   ::webhook-url
-                   ::locale
-                   ::method
-                   ::restrict-payment-methods-to-country
-                   ::metadata
-                   ::sequence-type
-                   ::customer-id
-                   ::mandate-id
-                   ::issuer
-                   ::billing-email
-                   ::due-date
-                   ::profile-id]))
+  (common/only-keys :req-un [::amount
+                             ::description
+                             ::redirect-url]
+                    :opt-un [::cancel-url
+                             ::webhook-url
+                             ::locale
+                             ::method
+                             ::restrict-payment-methods-to-country
+                             ::metadata
+                             ::sequence-type
+                             ::customer-id
+                             ::mandate-id
+                             ::issuer
+                             ::billing-email
+                             ::due-date
+                             ::profile-id]))
 
-(s/def ::create-first
-  (s/keys :req-un [::amount
-                   ::description
-                   ::redirect-url
-                   ::sequence-type
-                   ::customer-id]
-          :opt-un [::cancel-url
-                   ::webhook-url
-                   ::locale
-                   ::method
-                   ::restrict-payment-methods-to-country
-                   ::metadata
-                   ::mandate-id
-                   ::issuer
-                   ::billing-email
-                   ::due-date
-                   ::profile-id]))
+(defmulti create-spec :sequence-type)
 
-(s/def ::create-recurring
-  (s/keys :req-un [::amount
-                   ::description
-                   ::sequence-type]
-          :opt-un [::customer-id
-                   ::redirect-url
-                   ::cancel-url
-                   ::webhook-url
-                   ::locale
-                   ::method
-                   ::restrict-payment-methods-to-country
-                   ::metadata
-                   ::mandate-id
-                   ::issuer
-                   ::billing-email
-                   ::due-date
-                   ::profile-id]))
+;; If there is no method specified, the default option is `oneoff`.
+(defmethod create-spec :oneoff [_] ::create-oneoff)
+(defmethod create-spec nil [_] ::create-oneoff)
 
-(s/def ::create
-  (s/merge (s/or :oneoff ::create-oneoff
-                 :first ::create-first
-                 :recurring ::create-recurring)
-           (s/map-of #{:amount
-                       :description
-                       :redirect-url
-                       :cancel-url
-                       :webhook-url
-                       :locale
-                       :method
-                       :restrict-payment-methods-to-country
-                       :metadata
-                       :sequence-type
-                       :customer-id
-                       :mandate-id
-                       :issuer
-                       :billing-email
-                       :due-date
-                       :profile-id}
-                     any?)))
+;; Key `customer-id` is optional because it is possible to create a
+;; first payment using a special endpoint where `customer-id` is
+;; passed in path parameters.
+(defmethod create-spec :first
+  [_]
+  (common/only-keys :req-un [::amount
+                             ::description
+                             ::redirect-url
+                             ::sequence-type]
+                    :opt-un [::customer-id
+                             ::cancel-url
+                             ::webhook-url
+                             ::locale
+                             ::method
+                             ::restrict-payment-methods-to-country
+                             ::metadata
+                             ::mandate-id
+                             ::issuer
+                             ::billing-email
+                             ::due-date
+                             ::profile-id]))
+
+(defmethod create-spec :recurring
+  [_]
+  (common/only-keys :req-un [::amount
+                             ::description
+                             ::sequence-type]
+                    :opt-un [::customer-id
+                             ::redirect-url
+                             ::cancel-url
+                             ::webhook-url
+                             ::locale
+                             ::method
+                             ::restrict-payment-methods-to-country
+                             ::metadata
+                             ::mandate-id
+                             ::issuer
+                             ::billing-email
+                             ::due-date
+                             ::profile-id]))
+
+(s/def ::create (s/multi-spec create-spec :sequence-type))
 
 (s/def ::update
-  (s/merge (s/keys :opt-un [::description
-                            ::redirect-url
-                            ::cancel-url
-                            ::webhook-url
-                            ::locale
-                            ::method
-                            ::restrict-payment-methods-to-country
-                            ::metadata
-                            ::issuer
-                            ::billing-email
-                            ::due-date])
-           (s/map-of #{:amount
-                       :description
-                       :redirect-url
-                       :cancel-url
-                       :webhook-url
-                       :locale
-                       :method
-                       :restrict-payment-methods-to-country
-                       :metadata
-                       :issuer
-                       :billing-email
-                       :due-date}
-                     any?)))
+  (common/only-keys :opt-un [::description
+                             ::redirect-url
+                             ::cancel-url
+                             ::webhook-url
+                             ::locale
+                             ::method
+                             ::restrict-payment-methods-to-country
+                             ::metadata
+                             ::issuer
+                             ::billing-email
+                             ::due-date]))

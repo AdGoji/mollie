@@ -12,38 +12,24 @@
 (s/def ::mandate-reference string?)
 (s/def ::paypal-billing-agreement-id string?)
 
-(s/def ::create-directdebit
-  (s/merge (s/keys :req-un [::method
-                            ::consumer-name
-                            ::consumer-account]
-                   :opt-un [::consumer-bic
-                            ::signature-date
-                            ::mandate-reference])
-           (s/map-of #{:method
-                       :consumer-name
-                       :consumer-account
-                       :consumer-bic
-                       :signature-date
-                       :mandate-reference}
-                     any?)))
+(defmulti create-spec :method)
 
-(s/def ::create-paypal
-  (s/merge (s/keys :req-un [::method
-                            ::consumer-name
-                            ::consumer-email
-                            ::paypal-billing-agreement-id]
-                   :opt-un [::consumer-bic
-                            ::signature-date
-                            ::mandate-reference])
-           (s/map-of #{:method
-                       :consumer-name
-                       :consumer-email
-                       :paypal-billing-agreement-id
-                       :consumer-bic
-                       :signature-date
-                       :mandate-reference}
-                     any?)))
+(defmethod create-spec :directdebit
+  [_]
+  (common/only-keys :req-un [::method
+                             ::consumer-name
+                             ::consumer-account]
+                    :opt-un [::consumer-bic
+                             ::signature-date
+                             ::mandate-reference]))
 
-(s/def ::create
-  (s/or :directdebit ::create-directdebit
-        :paypal ::create-paypal))
+(defmethod create-spec :paypal
+  [_]
+  (common/only-keys :req-un [::method
+                             ::consumer-name
+                             ::consumer-account]
+                    :opt-un [::consumer-bic
+                             ::signature-date
+                             ::mandate-reference]))
+
+(s/def ::create (s/multi-spec create-spec :method))

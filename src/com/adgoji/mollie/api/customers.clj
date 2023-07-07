@@ -1,8 +1,7 @@
 (ns com.adgoji.mollie.api.customers
   (:require
-   [clojure.spec.alpha :as s]
-   [com.adgoji.mollie.client :as mollie.client]
    [com.adgoji.mollie :as mollie]
+   [com.adgoji.mollie.client :as mollie.client]
    [com.adgoji.mollie.customer :as customer]
    [com.adgoji.mollie.customer.request :as customer.request]
    [com.adgoji.mollie.link :as link]
@@ -39,38 +38,39 @@
 (defn create
   "Create a new Mollie customer."
   [client customer]
-  {:pre [(s/valid? ::customer.request/create customer)]}
-  (mollie.client/http-post client
-                           "/v2/customers"
-                           {:body                 customer
-                            :response-transformer transform-customer
-                            :spec                 ::mollie/customer}))
+  (let [body (spec/check customer ::customer.request/create)]
+    (mollie.client/http-post client
+                             "/v2/customers"
+                             {:body                 body
+                              :response-transformer transform-customer
+                              :spec                 ::mollie/customer})))
 
 (defn get-by-id
   "Fetch a single customer by `customer-id`."
   [client customer-id]
-  {:pre [(s/valid? ::customer/id customer-id)]}
   (mollie.client/http-get client
-                          (str "/v2/customers/" customer-id)
+                          (str "/v2/customers/"
+                               (spec/check customer-id ::customer/id))
                           {:response-transformer transform-customer
                            :spec                 ::mollie/customer}))
 
 (defn update-by-id
   "Update a single customer by `customer-id`."
   [client customer-id data]
-  {:pre [(s/valid? ::customer/id customer-id)
-         (s/valid? ::customer.request/update data)]}
-  (mollie.client/http-patch client
-                            (str "/v2/customers/" customer-id)
-                            {:body                 data
-                             :response-transformer transform-customer
-                             :spec                 ::mollie/customer}))
+  (let [body (spec/check data ::customer.request/update)]
+    (mollie.client/http-patch client
+                              (str "/v2/customers/"
+                                   (spec/check customer-id ::customer/id))
+                              {:body                 body
+                               :response-transformer transform-customer
+                               :spec                 ::mollie/customer})))
 
 (defn delete-by-id
   "Delete a single customer by `customer-id`."
   [client customer-id]
-  {:pre [(s/valid? ::customer/id customer-id)]}
-  (mollie.client/http-delete client (str "/v2/customers/" customer-id)))
+  (mollie.client/http-delete client
+                             (str "/v2/customers/"
+                                  (spec/check customer-id ::customer/id))))
 
 (defn- transform-customers
   [response]
@@ -90,11 +90,14 @@
 
 (defn get-list
   "Fetch all customers."
-  [client {:keys [from limit] :as opts}]
-  {:pre [(s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
-  (let [fetch-fn (if limit
-                   mollie.client/http-get
-                   (partial mollie.client/fetch-all ::mollie/customers))]
+  [client opts]
+  (let [{:keys [from limit]}
+        (spec/check opts ::pagination/opts)
+
+        fetch-fn
+        (if limit
+          mollie.client/http-get
+          (partial mollie.client/fetch-all ::mollie/customers))]
     (fetch-fn client
               "/v2/customers"
               {:response-transformer transform-customers

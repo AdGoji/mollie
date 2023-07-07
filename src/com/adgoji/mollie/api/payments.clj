@@ -1,6 +1,5 @@
 (ns com.adgoji.mollie.api.payments
   (:require
-   [clojure.spec.alpha :as s]
    [com.adgoji.mollie :as mollie]
    [com.adgoji.mollie.client :as mollie.client]
    [com.adgoji.mollie.creditcard :as creditcard]
@@ -136,7 +135,6 @@
            ::payment/redirect-url  redirect-url
            ::payment/method        (keyword method)
            ::payment/profile-id    profile-id
-           ::payment/details       (and details (get-details payment))
            ::payment/sequence-type (keyword sequence-type)
            ::link/self             (spec/qualify-link (:self links))
            ::link/dashboard        (spec/qualify-link (:dashboard links))
@@ -183,7 +181,8 @@
     (:mandate links)                    (assoc ::link/mandate
                                                (spec/qualify-link (:mandates links)))
     (:change-payment-state links)       (assoc ::link/change-payment-state
-                                               (spec/qualify-link (:change-payment-state links)))))
+                                               (spec/qualify-link (:change-payment-state links)))
+    details                             (into (get-details payment))))
 
 (defn- create-generic
   [client endpoint payment]
@@ -197,41 +196,41 @@
 (defn create
   "Create a new Mollie payment."
   ([client payment]
-   {:pre [(s/valid? ::payment.request/create payment)]}
-   (create-generic client "/v2/payments" payment))
-  ([client payment customer-id]
-   {:pre [(s/valid? ::payment.request/create payment)
-          (s/valid? ::customer/id customer-id)]}
    (create-generic client
-                   (format "/v2/customers/%s/payments" customer-id)
-                   payment)))
+                   "/v2/payments"
+                   (spec/check payment ::payment.request/create)))
+  ([client payment customer-id]
+   (create-generic client
+                   (format "/v2/customers/%s/payments"
+                           (spec/check customer-id ::customer/id))
+                   (spec/check payment ::payment.request/create))))
 
 (defn get-by-id
   "Fetch a single payment by `payment-id`."
   [client payment-id]
-  {:pre [(s/valid? ::payment/id payment-id)]}
   (mollie.client/http-get client
-                          (str "/v2/payments/" payment-id)
+                          (str "/v2/payments/"
+                               (spec/check payment-id ::payment/id))
                           {:response-transformer transform-payment
                            :spec                 ::mollie/payment}))
 
 (defn update-by-id
   "Update a single payment by `payment-id`."
   [client payment-id data]
-  {:pre [(s/valid? ::payment/id payment-id)
-         (s/valid? ::payment.request/update data)]}
-  (mollie.client/http-patch client
-                            (str "/v2/payments/" payment-id)
-                            {:body                 data
-                             :response-transformer transform-payment
-                             :spec                 ::mollie/payment}))
+  (let [body (spec/check data ::payment.request/update)]
+    (mollie.client/http-patch client
+                              (str "/v2/payments/"
+                                   (spec/check payment-id ::payment/id))
+                              {:body                 body
+                               :response-transformer transform-payment
+                               :spec                 ::mollie/payment})))
 
 (defn cancel-by-id
   "Cancel a single payment by `payment-id`."
   [client payment-id]
-  {:pre [(s/valid? ::payment/id payment-id)]}
   (mollie.client/http-delete client
-                             (str "/v2/payments/" payment-id)
+                             (str "/v2/payments/"
+                                  (spec/check payment-id ::payment/id))
                              {:response-transformer transform-payment
                               :spec                 ::mollie/payment}))
 
@@ -267,20 +266,15 @@
 (defn get-list
   "Fetch all payments."
   ([client opts]
-   {:pre [(s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
-   (get-list-generic client "/v2/payments" opts))
+   (get-list-generic client "/v2/payments" (spec/check opts ::pagination/opts)))
   ([client customer-id opts]
-   {:pre [(s/valid? ::customer/id customer-id)
-          (s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
    (get-list-generic client
-                     (format "/v2/customers/%s/payments" customer-id)
-                     opts))
+                     (format "/v2/customers/%s/payments"
+                             (spec/check customer-id ::customer/id))
+                     (spec/check opts ::pagination/opts)))
   ([client customer-id subscription-id opts]
-   {:pre [(s/valid? ::customer/id customer-id)
-          (s/valid? ::subscription/id subscription-id)
-          (s/valid? (s/keys :opt-un [::pagination/from ::pagination/limit]) opts)]}
    (get-list-generic client
                      (format "/v2/customers/%s/subscriptions/%s/payments"
-                             customer-id
-                             subscription-id)
-                     opts)))
+                             (spec/check customer-id ::customer/id)
+                             (spec/check subscription-id ::subscription/id))
+                     (spec/check opts ::pagination/opts))))
