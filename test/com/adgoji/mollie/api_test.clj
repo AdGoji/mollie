@@ -11,7 +11,8 @@
    [com.adgoji.mollie.mandate :as mandate]
    [com.adgoji.mollie.pagination :as pagination]
    [com.adgoji.mollie.payment :as payment]
-   [com.adgoji.mollie.subscription :as subscription])
+   [com.adgoji.mollie.subscription :as subscription]
+   [cognitect.anomalies :as anomalies])
   (:import
    (clojure.lang ExceptionInfo)
    (java.time LocalDate)))
@@ -33,8 +34,9 @@
       (:profile-id secrets)))
 
 (defn- new-client []
-  (sut/new-client {:api-key        api-key
-                   :check-response true}))
+  (sut/new-client {:api-key           api-key
+                   :check-response?   true
+                   :throw-exceptions? true}))
 
 (defn- ensure-customer []
   (if-let [customers (->> (sut/get-customers-list (new-client) {})
@@ -168,11 +170,29 @@
                      ::link/documentation))))))
 
 (deftest get-customer-by-id-test
-  (let [customer (ensure-customer)]
-    (is (= (assoc customer
-                  ::link/documentation {::link/type "text/html"
-                                        ::link/href "https://docs.mollie.com/reference/v2/customers-api/get-customer"})
-           (sut/get-customer-by-id (new-client) (::customer/id customer))))))
+  (testing "Customer exists"
+    (let [customer (ensure-customer)]
+      (is (= (assoc customer
+                    ::link/documentation {::link/type "text/html"
+                                          ::link/href "https://docs.mollie.com/reference/v2/customers-api/get-customer"})
+             (sut/get-customer-by-id (new-client) (::customer/id customer))))))
+
+  (testing "Customer was deleted"
+    (let [customer-id (::customer/id (ensure-customer))
+          client      (sut/new-client {:api-key           api-key
+                                       :check-response?   true
+                                       :throw-exceptions? false})]
+      (sut/delete-customer-by-id client customer-id)
+      (is (= {::anomalies/category ::anomalies/not-found
+              :error
+              {:status 410
+               :title  "Gone"
+               :detail "The customer is no longer available"
+               :links
+               {:documentation
+                {:href "https://docs.mollie.com/overview/handling-errors"
+                 :type "text/html"}}}}
+             (sut/get-customer-by-id client customer-id))))))
 
 (deftest update-customer-by-id-test
   (let [customer     (ensure-customer)
@@ -217,16 +237,16 @@
   (testing "Fetch with `from` parameter"
     (let [customer (ensure-customer)
           response (sut/get-customers-list
-                     (new-client)
-                     {:from (::customer/id customer)})]
+                    (new-client)
+                    {:from (::customer/id customer)})]
       (is (= customer (first (::mollie/customers response))))))
 
   (testing "Fetch with both `from` and `limit` parameters"
     (let [customer (ensure-customer)
           response (sut/get-customers-list
-                     (new-client)
-                     {:from  (::customer/id customer)
-                      :limit 1})]
+                    (new-client)
+                    {:from  (::customer/id customer)
+                     :limit 1})]
       (is (= [customer] (::mollie/customers response))))))
 
 (deftest create-payment-test
@@ -557,16 +577,16 @@
   (testing "Fetch with `from` parameter"
     (let [payment  (ensure-payment)
           response (sut/get-payments-list
-                     (new-client)
-                     {:from (::payment/id payment)})]
+                    (new-client)
+                    {:from (::payment/id payment)})]
       (is (= payment (first (::mollie/payments response))))))
 
   (testing "Fetch with both `from` and `limit` parameters"
     (let [payment  (ensure-payment)
           response (sut/get-payments-list
-                     (new-client)
-                     {:from  (::payment/id payment)
-                      :limit 1})]
+                    (new-client)
+                    {:from  (::payment/id payment)
+                     :limit 1})]
       (is (= [payment] (::mollie/payments response)))))
 
   (testing "Fetch all payments for a particular customer"
@@ -663,9 +683,9 @@
           customer-id (::customer/id customer)
           mandate     (ensure-mandate customer-id)
           response    (sut/get-mandates-list
-                        (new-client)
-                        customer-id
-                        {:from (::mandate/id mandate)})]
+                       (new-client)
+                       customer-id
+                       {:from (::mandate/id mandate)})]
       (is (= (dissoc mandate ::link/documentation)
              (dissoc (first (::mollie/mandates response)) ::link/documentation)))))
 
@@ -674,10 +694,10 @@
           customer-id (::customer/id customer)
           mandate     (ensure-mandate customer-id)
           response    (sut/get-mandates-list
-                        (new-client)
-                        customer-id
-                        {:from  (::mandate/id mandate)
-                         :limit 1})]
+                       (new-client)
+                       customer-id
+                       {:from  (::mandate/id mandate)
+                        :limit 1})]
       (is (= [(dissoc mandate ::link/documentation)]
              (into [] (map #(dissoc % ::link/documentation)) (::mollie/mandates response)))))))
 
@@ -764,17 +784,17 @@
   (testing "Fetch all subscriptions with `from` parameter"
     (let [{:keys [subscription]} (ensure-subscription)
           response               (sut/get-subscriptions-list
-                                   (new-client)
-                                   {:from (::subscription/id subscription)})]
+                                  (new-client)
+                                  {:from (::subscription/id subscription)})]
       (is (= (dissoc subscription ::link/documentation)
              (first (::mollie/subscriptions response))))))
 
   (testing "Fetch all subscriptions with both `from` and `limit` parameters"
     (let [{:keys [subscription]} (ensure-subscription)
           response               (sut/get-subscriptions-list
-                                   (new-client)
-                                   {:from  (::subscription/id subscription)
-                                    :limit 1})]
+                                  (new-client)
+                                  {:from  (::subscription/id subscription)
+                                   :limit 1})]
       (is (= [(dissoc subscription ::link/documentation)]
              (->> response
                   ::mollie/subscriptions
@@ -783,8 +803,8 @@
   (testing "Fetch subscriptions for a particular customer"
     (let [{:keys [customer subscription]} (ensure-subscription)
           response                        (sut/get-subscriptions-list
-                                            (new-client)
-                                            (::customer/id customer)
-                                            {})]
+                                           (new-client)
+                                           (::customer/id customer)
+                                           {})]
       (is (some #{(dissoc subscription ::link/documentation)}
                 (::mollie/subscriptions response))))))
