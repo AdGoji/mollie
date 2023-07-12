@@ -95,12 +95,15 @@ as keys. Please browse specs for more details.
 
 ### Client options ###
 
-- `:base-url` (string: optional) - redefine Mollie API base URL.
+- `:base-url` (string: optional, default `https://api.mollie.com`) -
+  redefine Mollie API base URL.
 - `:api-key` (string: required)
-- `:check-response` (boolean: optional) - additionally check if response
-  conforms to spec. This is disabled by default, so if response is
-  changed on the Mollie side, client will continue working (although
-  results may be unpredictable).
+- `:check-response?` (boolean: optional, default `false`) - additionally
+  check if response conforms to spec. This is disabled by default, so
+  if response is changed on the Mollie side, client will continue
+  working (although results may be unpredictable).
+- `:throw-exceptions?` (boolean: optional, default `true`) - throw
+  exceptions on faulty HTTP statuses (>=400) from Mollie API.
 
 ### Pagination ###
 

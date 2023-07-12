@@ -27,9 +27,11 @@
   Parameters:
   - `:api-key` required. Can be obtained from Mollie dashboard.
   - `:base-url` optionally override base URL for Mollie API.
-  - `:check-response` optional (default `false`). If `true`, all
+  - `:check-response?` optional (default `false`). If `true`, all
     responses will be additionally checked against spec. An error
     will be thrown if response doesn't conform to a spec.
+  - `:throw-exceptions?` optional (default `true`). If `true`, throw
+    an exception if HTTP status code from Mollie API is >= 400.
 
   Example:
   ```clojure
@@ -37,7 +39,8 @@
     (mollie.api/new-client
       {:api-key \"string\"
        :base-url \"https://api.mollie.com\"
-       :check-response true}))
+       :check-response? true
+       :throw-exceptions? false}))
   ```"
   [params]
   (client/new-client params))
