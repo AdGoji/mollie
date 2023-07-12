@@ -9,7 +9,9 @@
    [com.adgoji.utils.spec :as spec]
    [hato.client :as hc])
   (:import
-   (java.net URI URISyntaxException)))
+   (java.net URI URISyntaxException)
+   (java.time LocalDate)
+   (java.time.format DateTimeFormatter)))
 
 (def ^:private default-base-url "https://api.mollie.com")
 
@@ -32,6 +34,15 @@
     (json/read r {:eof-error? false
                   :bigdec     true
                   :key-fn     csk/->kebab-case-keyword})))
+
+(defn- write-json-value-fn
+  [_ v]
+  (cond
+    (instance? LocalDate v)
+    (.format ^LocalDate v DateTimeFormatter/ISO_DATE)
+
+    :else
+    v))
 
 (defn- request
   ([method req endpoint]
@@ -58,7 +69,8 @@
                        :as                :stream
                        :throw-exceptions? false}
                 body         (assoc :body (json/write-str body
-                                                          {:key-fn csk/->camelCaseString}))
+                                                          {:key-fn   csk/->camelCaseString
+                                                           :value-fn write-json-value-fn}))
                 query-params (assoc :query-params query-params)))
              (update :body parse-json))
 
