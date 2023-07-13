@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.3.2] - 2023-07-14 ##
+
+### Fixed ###
+
+- Response code 400 from Mollie API is not handled ([#13](https://github.com/AdGoji/mollie/issues/13)).
+
 ## [0.3.1] - 2023-07-13 ##
 
 ### Fixed ###
@@ -53,7 +59,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.1..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.2..HEAD
+[0.3.2]: https://github.com/AdGoji/mollie/compare/0.3.1..0.3.2
 [0.3.1]: https://github.com/AdGoji/mollie/compare/0.3.0..0.3.1
 [0.3.0]: https://github.com/AdGoji/mollie/compare/0.2.0..0.3.0
 [0.2.0]: https://github.com/AdGoji/mollie/compare/0.1.4..0.2.0
