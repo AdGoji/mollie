@@ -706,16 +706,18 @@
         customer-id (::customer/id customer)
         _           (ensure-mandate customer-id)
         description (str "Test subscription" (random-uuid))
+        start-date  (.plusMonths (LocalDate/now) 1)
         response    (sut/create-subscription (new-client)
                                              customer-id
                                              {:amount
                                               {:value    10.00M
                                                :currency "EUR"}
                                               :interval    "1 months"
-                                              :description description})]
+                                              :description description
+                                              :start-date  start-date})]
     (is (= {::subscription/status            :active
             ::link/customer                  (::link/self customer)
-            ::subscription/start-date        (LocalDate/now)
+            ::subscription/start-date        start-date
             ::subscription/resource          "subscription"
             ::subscription/amount            {::amount/value 10.00M ::amount/currency "EUR"}
             ::subscription/description       description

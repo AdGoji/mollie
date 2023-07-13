@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.3.1] - 2023-07-12 ##
+
+### Fixed ###
+
+- Unable to produce JSON with `java.time.LocalDate` ([#11](https://github.com/AdGoji/mollie/issues/11)).
+
 ## [0.3.0] - 2023-07-12 ##
 
 ### Added ###
@@ -47,7 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.0..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.1..HEAD
+[0.3.1]: https://github.com/AdGoji/mollie/compare/0.3.0..0.3.1
 [0.3.0]: https://github.com/AdGoji/mollie/compare/0.2.0..0.3.0
 [0.2.0]: https://github.com/AdGoji/mollie/compare/0.1.4..0.2.0
 [0.1.4]: https://github.com/AdGoji/mollie/compare/0.1.3..0.1.4
