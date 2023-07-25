@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.3.3] - 2023-07-25 ##
+
+### Fixed ###
+
+- Value `card-expiry-date` doesn't conform to spec for mandates ([#16](https://github.com/AdGoji/mollie/issues/16)).
+
 ## [0.3.2] - 2023-07-14 ##
 
 ### Fixed ###
@@ -59,7 +65,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.2..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.3..HEAD
+[0.3.3]: https://github.com/AdGoji/mollie/compare/0.3.2..0.3.3
 [0.3.2]: https://github.com/AdGoji/mollie/compare/0.3.1..0.3.2
 [0.3.1]: https://github.com/AdGoji/mollie/compare/0.3.0..0.3.1
 [0.3.0]: https://github.com/AdGoji/mollie/compare/0.2.0..0.3.0
