@@ -41,7 +41,7 @@
                                 ::creditcard/card-number      card-number
                                 ::creditcard/card-label       card-label
                                 ::creditcard/card-fingerprint card-fingerprint
-                                ::creditcard/card-expiry-date card-expiry-date}
+                                ::creditcard/card-expiry-date (LocalDate/parse card-expiry-date)}
                   :paypal      {::paypal/consumer-name    consumer-name
                                 ::paypal/consumer-account consumer-account}
                   {})]
