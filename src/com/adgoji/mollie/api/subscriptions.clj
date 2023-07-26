@@ -81,8 +81,8 @@
   "Update a single customer's subscription by `subscription-id`."
   [client customer-id subscription-id data]
   (let [body (cond-> data
-               (:amount data) (update-in [:amount :valud] decimal/format)
-               :always        (spec/check ::subscription.request/update))]
+               :always        (spec/check ::subscription.request/update)
+               (:amount data) (update-in [:amount :value] decimal/format))]
     (mollie.client/http-patch client
                               (format "/v2/customers/%s/subscriptions/%s"
                                       (spec/check customer-id ::customer/id)
