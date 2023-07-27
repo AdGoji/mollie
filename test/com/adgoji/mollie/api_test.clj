@@ -12,7 +12,8 @@
    [com.adgoji.mollie.pagination :as pagination]
    [com.adgoji.mollie.payment :as payment]
    [com.adgoji.mollie.subscription :as subscription]
-   [cognitect.anomalies :as anomalies])
+   [cognitect.anomalies :as anomalies]
+   [com.adgoji.mollie.creditcard :as creditcard])
   (:import
    (clojure.lang ExceptionInfo)
    (java.time LocalDate)))
@@ -668,8 +669,13 @@
       (is (vector? (::mollie/mandates response)))
       (is (= (count (::mollie/mandates response))
              (::pagination/count response)))
-      (is (some #{(assoc mandate ::link/documentation nil)}
-                (::mollie/mandates response)))))
+      ;; Value `card-fingerprint` is always different in the test mode.
+      (is (some #{(-> mandate
+                      (assoc ::link/documentation nil)
+                      (dissoc ::creditcard/card-fingerprint))}
+                (->> response
+                     ::mollie/mandates
+                     (sequence (map #(dissoc % ::creditcard/card-fingerprint))))))))
 
   (testing "Fetch with `limit` parameter"
     (let [customer    (ensure-customer)
@@ -686,8 +692,11 @@
                        (new-client)
                        customer-id
                        {:from (::mandate/id mandate)})]
-      (is (= (dissoc mandate ::link/documentation)
-             (dissoc (first (::mollie/mandates response)) ::link/documentation)))))
+      (is (= (dissoc mandate ::link/documentation ::creditcard/card-fingerprint)
+             (-> response
+                 ::mollie/mandates
+                 first
+                 (dissoc ::link/documentation ::creditcard/card-fingerprint))))))
 
   (testing "Fetch with `from` and `limit` parameters"
     (let [customer    (ensure-customer)
@@ -698,8 +707,12 @@
                        customer-id
                        {:from  (::mandate/id mandate)
                         :limit 1})]
-      (is (= [(dissoc mandate ::link/documentation)]
-             (into [] (map #(dissoc % ::link/documentation)) (::mollie/mandates response)))))))
+      (is (= [(dissoc mandate ::link/documentation ::creditcard/card-fingerprint)]
+             (->> response
+                  ::mollie/mandates
+                  (into [] (map #(dissoc %
+                                         ::link/documentation
+                                         ::creditcard/card-fingerprint)))))))))
 
 (deftest create-subscription-test
   (let [customer    (ensure-customer)
@@ -745,15 +758,25 @@
 
 (deftest update-subscription-by-id-test
   (let [{:keys [customer subscription]} (ensure-subscription)
-        updated-description             (str "Updated subscription " (random-uuid))]
+        updated-description             (str "Updated subscription " (random-uuid))
+        updated-amount                  20.00M
+        updated-interval                "10 days"
+        updated-next-payment-date       (. (LocalDate/now) plusDays 10)]
     (is (= (-> subscription
-               (assoc ::subscription/description updated-description)
-               (assoc ::link/documentation {::link/type "text/html"
+               (assoc ::subscription/description updated-description
+                      ::subscription/interval updated-interval
+                      ::subscription/amount {::amount/value    updated-amount
+                                             ::amount/currency "EUR"}
+                      ::subscription/next-payment-date updated-next-payment-date
+                      ::link/documentation {::link/type "text/html"
                                             ::link/href "https://docs.mollie.com/reference/v2/subscriptions-api/update-subscription"}))
            (sut/update-subscription-by-id (new-client)
                                           (::customer/id customer)
                                           (::subscription/id subscription)
-                                          {:description updated-description})))))
+                                          {:description updated-description
+                                           :amount      {:currency "EUR"
+                                                         :value    updated-amount}
+                                           :interval    updated-interval})))))
 
 (deftest cancel-subscription-by-id
   (let [{:keys [customer subscription]} (ensure-subscription)]
