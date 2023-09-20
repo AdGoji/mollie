@@ -1,7 +1,7 @@
 (ns com.adgoji.mollie.api-test
   (:require
-   [clojure.edn :as edn]
-   [clojure.test :refer [deftest is testing]]
+   [clojure.test :refer [deftest is testing use-fixtures]]
+   [com.adgoji.mollie.utils :as utils]
    [com.adgoji.mollie :as mollie]
    [com.adgoji.mollie.amount :as amount]
    [com.adgoji.mollie.api :as sut]
@@ -18,54 +18,35 @@
    (clojure.lang ExceptionInfo)
    (java.time LocalDate)))
 
-(def ^:private secrets-file "/.adgoji-mollie-secrets.edn")
-(def ^:private secrets
-  (try
-    (-> (str (System/getenv "HOME") secrets-file)
-        slurp
-        edn/read-string)
-    (catch Exception _ {})))
-
-(def ^:private api-key
-  (or (System/getenv "MOLLIE_API_KEY")
-      (:api-key secrets)))
-
-(def ^:private profile-id
-  (or (System/getenv "MOLLIE_PROFILE_ID")
-      (:profile-id secrets)))
-
-(defn- new-client []
-  (sut/new-client {:api-key           api-key
-                   :check-response?   true
-                   :throw-exceptions? true}))
+(use-fixtures :once utils/with-mollie-client)
 
 (defn- ensure-customer []
-  (if-let [customers (->> (sut/get-customers-list (new-client) {})
+  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client* {})
                           ::mollie/customers
                           seq)]
     (rand-nth customers)
-    (sut/create-customer (new-client) {})))
+    (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
 
 (defn- ensure-customer-without-mandate []
-  (if-let [customers (->> (sut/get-customers-list (new-client) {})
+  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client* {})
                           ::mollie/customers
                           (sequence (remove ::link/mandates))
                           seq)]
     (let [customer (rand-nth customers)]
-      (if-not (->> (sut/get-mandates-list (new-client) (::customer/id customer) {})
+      (if-not (->> (sut/get-mandates-list utils/*mollie-client* (::customer/id customer) {})
                    ::mollie/mandates
                    seq)
         customer
         (recur)))
-    (sut/create-customer (new-client) {})))
+    (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
 
 (defn- ensure-mandate [customer-id]
-  (if-let [mandates (->> (sut/get-mandates-list (new-client) customer-id {})
+  (if-let [mandates (->> (sut/get-mandates-list utils/*mollie-client* customer-id {})
                          ::mollie/mandates
                          (sequence (filter #(= (::mandate/status %) :valid)))
                          seq)]
     (first mandates)
-    (sut/create-mandate (new-client)
+    (sut/create-mandate utils/*mollie-client*
                         customer-id
                         {:method           :directdebit
                          :consumer-name    "Test Consumer"
@@ -76,12 +57,12 @@
         customer-id  (::customer/id customer)
         mandate      (ensure-mandate customer-id)
         subscription (if-let [subscriptions
-                              (->> (sut/get-subscriptions-list (new-client) customer-id {})
+                              (->> (sut/get-subscriptions-list utils/*mollie-client* customer-id {})
                                    ::mollie/subscriptions
                                    (sequence (filter #(= (::subscription/status %) :active)))
                                    seq)]
                        (first subscriptions)
-                       (sut/create-subscription (new-client)
+                       (sut/create-subscription utils/*mollie-client*
                                                 customer-id
                                                 {:amount
                                                  {:value    10.00M
@@ -96,22 +77,22 @@
 
 (defn- ensure-payment
   ([]
-   (if-let [payments (->> (sut/get-payments-list (new-client) {})
+   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* {})
                           ::mollie/payments
                           seq)]
      (rand-nth payments)
-     (sut/create-payment (new-client)
+     (sut/create-payment utils/*mollie-client*
                          {:amount
                           {:value    10.00M
                            :currency "EUR"}
                           :description  "Auto generated test payment"
                           :redirect-url "https://example.com"})))
   ([customer-id]
-   (if-let [payments (->> (sut/get-payments-list (new-client) customer-id {})
+   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* customer-id {})
                           ::mollie/payments
                           seq)]
      (rand-nth payments)
-     (sut/create-payment (new-client)
+     (sut/create-payment utils/*mollie-client*
                          {:amount
                           {:value    10.00M
                            :currency "EUR"}
@@ -120,14 +101,14 @@
                          customer-id))))
 
 (defn- ensure-cancelable-payment []
-  (if-let [payments (->> (sut/get-payments-list (new-client) {})
+  (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* {})
                          ::mollie/payments
                          (sequence (filter ::payment/is-cancelable))
                          seq)]
     (rand-nth payments)
     (let [customer-id (::customer/id (ensure-customer))]
       (ensure-mandate customer-id)
-      (sut/create-payment (new-client)
+      (sut/create-payment utils/*mollie-client*
                           {:amount
                            {:value    10.00M
                             :currency "EUR"}
@@ -137,9 +118,9 @@
 
 (deftest create-customer-test
   (testing "Create customer without data"
-    (let [customer (sut/create-customer (new-client) {})]
+    (let [customer (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})]
       (is (= {::customer/resource "customer"
-              ::customer/metadata nil
+              ::customer/metadata utils/default-metadata
               ::customer/email    nil
               ::customer/locale   nil
               ::customer/mode     :test
@@ -152,13 +133,14 @@
                      ::link/documentation)))))
 
   (testing "Create customer with extra data"
-    (let [customer (sut/create-customer (new-client)
+    (let [metadata (into utils/default-metadata {:some "Test", :data 123})
+          customer (sut/create-customer utils/*mollie-client*
                                         {:name     "Customer name"
                                          :email    "test@email.com"
                                          :locale   "en_NL"
-                                         :metadata {:some "Test" :data 123}})]
+                                         :metadata metadata})]
       (is (= {::customer/resource "customer"
-              ::customer/metadata {:some "Test" :data 123}
+              ::customer/metadata metadata
               ::customer/email    "test@email.com"
               ::customer/locale   "en_NL"
               ::customer/mode     :test
@@ -176,11 +158,11 @@
       (is (= (assoc customer
                     ::link/documentation {::link/type "text/html"
                                           ::link/href "https://docs.mollie.com/reference/v2/customers-api/get-customer"})
-             (sut/get-customer-by-id (new-client) (::customer/id customer))))))
+             (sut/get-customer-by-id utils/*mollie-client* (::customer/id customer))))))
 
   (testing "Customer was deleted"
     (let [customer-id (::customer/id (ensure-customer))
-          client      (sut/new-client {:api-key           api-key
+          client      (sut/new-client {:api-key           utils/api-key
                                        :check-response?   true
                                        :throw-exceptions? false})]
       (sut/delete-customer-by-id client customer-id)
@@ -198,20 +180,20 @@
 (deftest update-customer-by-id-test
   (let [customer     (ensure-customer)
         new-email    "new@email.com"
-        new-metadata {:random (rand-int 1000)}]
+        new-metadata (into utils/default-metadata {:random (rand-int 1000)})]
     (is (= (assoc customer
                   ::customer/email new-email
                   ::customer/metadata new-metadata
                   ::link/documentation {::link/type "text/html"
                                         ::link/href "https://docs.mollie.com/reference/v2/customers-api/update-customer"})
-           (sut/update-customer-by-id (new-client)
+           (sut/update-customer-by-id utils/*mollie-client*
                                       (::customer/id customer)
                                       {:email    new-email
                                        :metadata new-metadata})))))
 
 (deftest delete-customer-by-id-test
   (let [customer-id (::customer/id (ensure-customer))
-        client      (new-client)]
+        client      utils/*mollie-client*]
     (is (nil? (sut/delete-customer-by-id client customer-id)))
     (is (thrown-with-msg? ExceptionInfo
                           #"Mollie API error"
@@ -220,7 +202,7 @@
 (deftest get-customers-list-test
   (testing "Fetch full list of customers"
     (ensure-customer)
-    (let [response (sut/get-customers-list (new-client) {})]
+    (let [response (sut/get-customers-list utils/*mollie-client* {})]
       (is (pos-int? (::pagination/count response)))
       (is (nil? (::pagination/next response)))
       (is (nil? (::pagination/previous response)))
@@ -231,21 +213,21 @@
 
   (testing "Fetch with `limit` parameter"
     (ensure-customer)
-    (let [response (sut/get-customers-list (new-client) {:limit 1})]
+    (let [response (sut/get-customers-list utils/*mollie-client* {:limit 1})]
       (is (= 1 (::pagination/count response)))
       (is (= 1 (count (::mollie/customers response))))))
 
   (testing "Fetch with `from` parameter"
     (let [customer (ensure-customer)
           response (sut/get-customers-list
-                    (new-client)
+                    utils/*mollie-client*
                     {:from (::customer/id customer)})]
       (is (= customer (first (::mollie/customers response))))))
 
   (testing "Fetch with both `from` and `limit` parameters"
     (let [customer (ensure-customer)
           response (sut/get-customers-list
-                    (new-client)
+                    utils/*mollie-client*
                     {:from  (::customer/id customer)
                      :limit 1})]
       (is (= [customer] (::mollie/customers response))))))
@@ -256,7 +238,7 @@
           amount-currency "EUR"
           description     "Unit test payment"
           redirect-url    "https://example.com"
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -264,7 +246,7 @@
                                                :redirect-url redirect-url})]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html",
                ::link/href "https://docs.mollie.com/reference/v2/payments-api/create-payment"}
@@ -289,7 +271,7 @@
           amount-currency "EUR"
           description     "Unit test payment"
           redirect-url    "https://example.com"
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -298,7 +280,7 @@
                                                :method       :ideal})]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html",
                ::link/href "https://docs.mollie.com/reference/v2/payments-api/create-payment"}
@@ -326,7 +308,7 @@
           sequence-type   :first
           redirect-url    "https://example.com"
           customer-id     (::customer/id customer)
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -336,7 +318,7 @@
                                                :customer-id   customer-id})]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html",
                ::link/href "https://docs.mollie.com/reference/v2/payments-api/create-payment"}
@@ -365,7 +347,7 @@
           customer-id     (::customer/id customer)
           description     "One-off payment for a customer"
           redirect-url    "https://example.com"
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -374,7 +356,7 @@
                                               customer-id)]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html",
                ::link/href "https://docs.mollie.com/reference/v2/customers-api/create-customer-payment"}
@@ -404,7 +386,7 @@
           sequence-type   :first
           redirect-url    "https://example.com"
           customer-id     (::customer/id customer)
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -414,7 +396,7 @@
                                                :customer-id   customer-id})]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html"
                ::link/href "https://docs.mollie.com/reference/v2/payments-api/create-payment"}
@@ -444,7 +426,7 @@
           sequence-type   :first
           redirect-url    "https://example.com"
           customer-id     (::customer/id customer)
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -454,7 +436,7 @@
                                               customer-id)]
       (is (= {::payment/description   description
               ::payment/resource      "payment"
-              ::payment/profile-id    profile-id
+              ::payment/profile-id    utils/profile-id
               ::link/documentation
               {::link/type "text/html"
                ::link/href "https://docs.mollie.com/reference/v2/customers-api/create-customer-payment"}
@@ -484,7 +466,7 @@
           amount-currency "EUR"
           description     "Charge directly"
           sequence-type   :recurring
-          payment         (sut/create-payment (new-client)
+          payment         (sut/create-payment utils/*mollie-client*
                                               {:amount
                                                {:value    amount-value
                                                 :currency amount-currency}
@@ -502,7 +484,7 @@
               ::payment/description          "Charge directly"
               ::payment/customer-id          customer-id
               ::payment/resource             "payment"
-              ::payment/profile-id           profile-id
+              ::payment/profile-id           utils/profile-id
               ::payment/is-cancelable        true
               ::link/documentation
               {::link/type "text/html"
@@ -532,7 +514,7 @@
     (is (= (assoc payment
                   ::link/documentation {::link/type "text/html"
                                         ::link/href "https://docs.mollie.com/reference/v2/payments-api/get-payment"})
-           (sut/get-payment-by-id (new-client) (::payment/id payment))))))
+           (sut/get-payment-by-id utils/*mollie-client* (::payment/id payment))))))
 
 (deftest update-payment-by-id-test
   (let [payment         (ensure-payment)
@@ -541,13 +523,13 @@
                   ::link/documentation {::link/type "text/html"
                                         ::link/href "https://docs.mollie.com/reference/v2/payments-api/update-payment"}
                   ::payment/description new-description)
-           (sut/update-payment-by-id (new-client)
+           (sut/update-payment-by-id utils/*mollie-client*
                                      (::payment/id payment)
                                      {:description new-description})))))
 
 (deftest cancel-payment-by-id-test
   (let [payment  (ensure-cancelable-payment)
-        canceled (sut/cancel-payment-by-id (new-client) (::payment/id payment))]
+        canceled (sut/cancel-payment-by-id utils/*mollie-client* (::payment/id payment))]
     (is (= (-> payment
                (assoc ::payment/status :canceled
                       ::link/documentation {::link/type "text/html"
@@ -561,7 +543,7 @@
 (deftest get-payments-list-test
   (testing "Fetch full list of payments"
     (ensure-payment)
-    (let [response (sut/get-payments-list (new-client) {})]
+    (let [response (sut/get-payments-list utils/*mollie-client* {})]
       (is (pos-int? (::pagination/count response)))
       (is (nil? (::pagination/next response)))
       (is (nil? (::pagination/previous response)))
@@ -572,20 +554,20 @@
 
   (testing "Fetch with `limit` parameter"
     (ensure-payment)
-    (let [response (sut/get-payments-list (new-client) {:limit 1})]
+    (let [response (sut/get-payments-list utils/*mollie-client* {:limit 1})]
       (is (= 1 (::pagination/count response) (count (::mollie/payments response))))))
 
   (testing "Fetch with `from` parameter"
     (let [payment  (ensure-payment)
           response (sut/get-payments-list
-                    (new-client)
+                    utils/*mollie-client*
                     {:from (::payment/id payment)})]
       (is (= payment (first (::mollie/payments response))))))
 
   (testing "Fetch with both `from` and `limit` parameters"
     (let [payment  (ensure-payment)
           response (sut/get-payments-list
-                    (new-client)
+                    utils/*mollie-client*
                     {:from  (::payment/id payment)
                      :limit 1})]
       (is (= [payment] (::mollie/payments response)))))
@@ -594,7 +576,7 @@
     (let [customer    (ensure-customer)
           customer-id (::customer/id customer)
           payment     (ensure-payment customer-id)
-          response    (sut/get-payments-list (new-client) customer-id {})]
+          response    (sut/get-payments-list utils/*mollie-client* customer-id {})]
       (is (pos-int? (count (::mollie/payments response))))
       (is (every? #{customer-id} (map ::payment/customer-id (::mollie/payments response))))
       (is (some #{(assoc payment ::link/documentation nil)}
@@ -605,7 +587,7 @@
                   customer]} (ensure-subscription)
           subscription-id    (::subscription/id subscription)
           customer-id        (::customer/id customer)
-          response           (sut/get-payments-list (new-client)
+          response           (sut/get-payments-list utils/*mollie-client*
                                                     customer-id
                                                     subscription-id
                                                     {})]
@@ -629,7 +611,7 @@
                ::link/href "https://docs.mollie.com/reference/v2/mandates-api/create-mandate"}
               ::mandate/mode              :test
               ::mandate/status            :valid}
-             (-> (sut/create-mandate (new-client)
+             (-> (sut/create-mandate utils/*mollie-client*
                                      customer-id
                                      {:method           :directdebit
                                       :consumer-name    "Test Consumer"
@@ -646,13 +628,13 @@
                   ::link/documentation
                   {::link/type "text/html"
                    ::link/href "https://docs.mollie.com/reference/v2/mandates-api/get-mandate"})
-           (sut/get-mandate-by-id (new-client) customer-id (::mandate/id mandate))))))
+           (sut/get-mandate-by-id utils/*mollie-client* customer-id (::mandate/id mandate))))))
 
 (deftest revoke-mandate-by-id-test
   (let [customer    (ensure-customer)
         customer-id (::customer/id customer)
         mandate     (ensure-mandate customer-id)]
-    (is (nil? (sut/revoke-mandate-by-id (new-client)
+    (is (nil? (sut/revoke-mandate-by-id utils/*mollie-client*
                                         customer-id
                                         (::mandate/id mandate))))))
 
@@ -661,7 +643,7 @@
     (let [customer    (ensure-customer)
           customer-id (::customer/id customer)
           mandate     (ensure-mandate customer-id)
-          response    (sut/get-mandates-list (new-client) customer-id {})]
+          response    (sut/get-mandates-list utils/*mollie-client* customer-id {})]
       (is (pos-int? (::pagination/count response)))
       (is (nil? (::pagination/next response)))
       (is (nil? (::pagination/previous response)))
@@ -681,7 +663,7 @@
     (let [customer    (ensure-customer)
           customer-id (::customer/id customer)
           _           (ensure-mandate customer-id)
-          response    (sut/get-mandates-list (new-client) customer-id {:limit 1})]
+          response    (sut/get-mandates-list utils/*mollie-client* customer-id {:limit 1})]
       (is (= 1 (::pagination/count response) (count (::mollie/mandates response))))))
 
   (testing "Fetch with `from` parameter"
@@ -689,7 +671,7 @@
           customer-id (::customer/id customer)
           mandate     (ensure-mandate customer-id)
           response    (sut/get-mandates-list
-                       (new-client)
+                       utils/*mollie-client*
                        customer-id
                        {:from (::mandate/id mandate)})]
       (is (= (dissoc mandate ::link/documentation ::creditcard/card-fingerprint)
@@ -703,7 +685,7 @@
           customer-id (::customer/id customer)
           mandate     (ensure-mandate customer-id)
           response    (sut/get-mandates-list
-                       (new-client)
+                       utils/*mollie-client*
                        customer-id
                        {:from  (::mandate/id mandate)
                         :limit 1})]
@@ -720,7 +702,7 @@
         _           (ensure-mandate customer-id)
         description (str "Test subscription" (random-uuid))
         start-date  (.plusMonths (LocalDate/now) 1)
-        response    (sut/create-subscription (new-client)
+        response    (sut/create-subscription utils/*mollie-client*
                                              customer-id
                                              {:amount
                                               {:value    10.00M
@@ -752,7 +734,7 @@
     (is (= (assoc subscription
                   ::link/documentation {::link/type "text/html"
                                         ::link/href "https://docs.mollie.com/reference/v2/subscriptions-api/get-subscription"})
-           (sut/get-subscription-by-id (new-client)
+           (sut/get-subscription-by-id utils/*mollie-client*
                                        (::customer/id customer)
                                        (::subscription/id subscription))))))
 
@@ -770,7 +752,7 @@
                       ::subscription/next-payment-date updated-next-payment-date
                       ::link/documentation {::link/type "text/html"
                                             ::link/href "https://docs.mollie.com/reference/v2/subscriptions-api/update-subscription"}))
-           (sut/update-subscription-by-id (new-client)
+           (sut/update-subscription-by-id utils/*mollie-client*
                                           (::customer/id customer)
                                           (::subscription/id subscription)
                                           {:description updated-description
@@ -786,7 +768,7 @@
                                             ::link/href "https://docs.mollie.com/reference/v2/subscriptions-api/cancel-subscription"})
                (dissoc ::subscription/next-payment-date
                        ::subscription/canceled-at))
-           (-> (sut/cancel-subscription-by-id (new-client)
+           (-> (sut/cancel-subscription-by-id utils/*mollie-client*
                                               (::customer/id customer)
                                               (::subscription/id subscription))
                (dissoc ::subscription/canceled-at))))))
@@ -794,7 +776,7 @@
 (deftest get-subscriptions-list-test
   (testing "Fetch all subscriptions for all customers"
     (ensure-subscription)
-    (let [response (sut/get-subscriptions-list (new-client) {})]
+    (let [response (sut/get-subscriptions-list utils/*mollie-client* {})]
       (is (pos-int? (::pagination/count response)))
       (is (nil? (::pagination/next response)))
       (is (nil? (::pagination/previous response)))
@@ -803,13 +785,13 @@
 
   (testing "Fetch all subscriptions with `limit` parameter"
     (ensure-subscription)
-    (let [response (sut/get-subscriptions-list (new-client) {:limit 1})]
+    (let [response (sut/get-subscriptions-list utils/*mollie-client* {:limit 1})]
       (is (= 1 (::pagination/count response) (count (::mollie/subscriptions response))))))
 
   (testing "Fetch all subscriptions with `from` parameter"
     (let [{:keys [subscription]} (ensure-subscription)
           response               (sut/get-subscriptions-list
-                                  (new-client)
+                                  utils/*mollie-client*
                                   {:from (::subscription/id subscription)})]
       (is (= (dissoc subscription ::link/documentation)
              (first (::mollie/subscriptions response))))))
@@ -817,7 +799,7 @@
   (testing "Fetch all subscriptions with both `from` and `limit` parameters"
     (let [{:keys [subscription]} (ensure-subscription)
           response               (sut/get-subscriptions-list
-                                  (new-client)
+                                  utils/*mollie-client*
                                   {:from  (::subscription/id subscription)
                                    :limit 1})]
       (is (= [(dissoc subscription ::link/documentation)]
@@ -828,7 +810,7 @@
   (testing "Fetch subscriptions for a particular customer"
     (let [{:keys [customer subscription]} (ensure-subscription)
           response                        (sut/get-subscriptions-list
-                                           (new-client)
+                                           utils/*mollie-client*
                                            (::customer/id customer)
                                            {})]
       (is (some #{(dissoc subscription ::link/documentation)}
