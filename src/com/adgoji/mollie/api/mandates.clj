@@ -37,11 +37,11 @@
                   :directdebit {::directdebit/consumer-name    consumer-name
                                 ::directdebit/consumer-account consumer-account
                                 ::directdebit/consumer-bic     consumer-bic}
-                  :creditcard  {::creditcard/card-holder      card-holder
-                                ::creditcard/card-number      card-number
-                                ::creditcard/card-label       card-label
-                                ::creditcard/card-fingerprint card-fingerprint
-                                ::creditcard/card-expiry-date (LocalDate/parse card-expiry-date)}
+                  :creditcard  (cond-> {::creditcard/card-fingerprint card-fingerprint
+                                        ::creditcard/card-expiry-date (LocalDate/parse card-expiry-date)}
+                                 card-number (assoc ::creditcard/card-number card-number)
+                                 card-holder (assoc ::creditcard/card-holder card-holder)
+                                 card-label  (assoc ::creditcard/card-label card-label))
                   :paypal      {::paypal/consumer-name    consumer-name
                                 ::paypal/consumer-account consumer-account}
                   {})]

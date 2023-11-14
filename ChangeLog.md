@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.3.5] - 2023-11-15 ##
+
+### Fixed ###
+
+- Spec error on get mandates API call ([#22](https://github.com/AdGoji/mollie/issues/22)).
+
 ### Added ###
 - Test data cleanup
 
@@ -74,7 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.4..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.5..HEAD
+[0.3.5]: https://github.com/AdGoji/mollie/compare/0.3.4..0.3.5
 [0.3.4]: https://github.com/AdGoji/mollie/compare/0.3.3..0.3.4
 [0.3.3]: https://github.com/AdGoji/mollie/compare/0.3.2..0.3.3
 [0.3.2]: https://github.com/AdGoji/mollie/compare/0.3.1..0.3.2
