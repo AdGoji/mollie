@@ -6,7 +6,7 @@
 
   test
   {:doc  "Run unit tests"
-   :task (clojure "-M:test")}
+   :task (clojure "-M:test:test-runner")}
 
   install-git-hooks
   {:doc  "Install required Git pre-commit hooks"

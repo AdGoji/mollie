@@ -318,16 +318,16 @@
                           ::mandate/status
                           ::mandate/method
                           ::mandate/mandate-reference
-                          ::mandate/signature-date
                           ::mandate/created-at
-                          ::creditcard/card-holder
-                          ::creditcard/card-number
-                          ::creditcard/card-label
                           ::creditcard/card-fingerprint
                           ::creditcard/card-expiry-date
                           ::link/self
                           ::link/customer
-                          ::link/documentation]))
+                          ::link/documentation]
+                    :opt [::creditcard/card-number
+                          ::creditcard/card-holder
+                          ::creditcard/card-label
+                          ::mandate/signature-date]))
 
 (defmethod mandate-spec :paypal
   [_]
