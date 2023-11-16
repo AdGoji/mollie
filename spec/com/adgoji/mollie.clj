@@ -301,14 +301,14 @@
                           ::mandate/status
                           ::mandate/method
                           ::mandate/mandate-reference
-                          ::mandate/signature-date
                           ::mandate/created-at
                           ::directdebit/consumer-name
                           ::directdebit/consumer-account
                           ::directdebit/consumer-bic
                           ::link/self
                           ::link/customer
-                          ::link/documentation]))
+                          ::link/documentation]
+                    :opt [::mandate/signature-date]))
 
 (defmethod mandate-spec :creditcard
   [_]
@@ -337,13 +337,13 @@
                           ::mandate/status
                           ::mandate/method
                           ::mandate/mandate-reference
-                          ::mandate/signature-date
                           ::mandate/created-at
                           ::paypal/consumer-name
                           ::paypal/consumer-account
                           ::link/self
                           ::link/customer
-                          ::link/documentation]))
+                          ::link/documentation]
+                    :opt [::mandate/signature-date]))
 
 (s/def ::mandate (s/multi-spec mandate-spec ::mandate/method))
 
