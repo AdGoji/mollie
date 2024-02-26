@@ -12,7 +12,10 @@
    [com.adgoji.mollie.payment.request :as payment.request]
    [com.adgoji.mollie.subscription :as subscription]
    [com.adgoji.utils.decimal :as decimal]
-   [com.adgoji.utils.spec :as spec])
+   [com.adgoji.utils.spec :as spec]
+   [com.adgoji.mollie.refund :as refund]
+   [clojure.string :as str]
+   [com.adgoji.mollie.chargeback :as chargeback])
   (:import
    (java.time Instant LocalDate)))
 
@@ -87,6 +90,67 @@
   (throw (ex-info "Payment method is not supported"
                   {:method method})))
 
+(defn- transform-refund
+  [{:keys [resource
+           id
+           amount
+           description
+           status
+           payment-id
+           created-at
+           links
+           settlement-id
+           settlement-amount
+           ;; TODO: Update when orders are implemented
+           _lines
+           order-id
+           metadata]}]
+  (cond-> {::refund/resource resource
+           ::refund/id id
+           ::refund/amount (spec/qualify-amount amount)
+           ::refund/description description
+           ::refund/status (keyword status)
+           ::refund/payment-id payment-id
+           ::refund/created-at (Instant/parse created-at)
+           ::link/self (spec/qualify-link (:self links))
+           ::link/payment (spec/qualify-link (:payment links))}
+    settlement-id          (assoc ::refund/settlement-id settlement-id)
+    settlement-amount      (assoc ::refund/settlement-amount (spec/qualify-amount settlement-amount))
+    order-id               (assoc ::refund/order-id order-id)
+    metadata               (assoc ::refund/metadata metadata)
+    (:documentation links) (assoc ::link/documentation (spec/qualify-link (:documentation links)))
+    (:settlement links)    (assoc ::link/settlement (spec/qualify-link (:settlement links)))
+    (:order links)         (assoc ::link/order (spec/qualify-link (:order links)))))
+
+(defn- transform-chargeback
+  [{:keys [resource
+           id
+           amount
+           created-at
+           payment-id
+           settlement-amount
+           links
+           reason
+           reversed-at]}]
+  (cond-> {::chargeback/resource resource
+           ::chargeback/id id
+           ::chargeback/amount (spec/qualify-amount amount)
+           ::chargeback/created-at (Instant/parse created-at)
+           ::chargeback/payment-id payment-id
+           ::chargeback/settlement-amount (spec/qualify-amount settlement-amount)
+           ::link/self (spec/qualify-link (:self links))
+           ::link/payment (spec/qualify-link (:payment links))}
+    reason                 (assoc ::chargeback/reason reason)
+    reversed-at            (assoc ::chargeback/reversed-at (Instant/parse reversed-at))
+    (:settlement links)    (assoc ::link/settlement (spec/qualify-link (:settlement links)))
+    (:documentation links) (assoc ::link/documentation (spec/qualify-link (:documentation links)))))
+
+(defn- transform-embedded
+  [{:keys [refunds chargebacks _captures]}]
+  (cond-> {}
+    refunds     (assoc ::mollie/refunds (into [] (map transform-refund) refunds))
+    chargebacks (assoc ::mollie/chargebacks (into [] (map transform-chargeback) chargebacks))))
+
 (defn- transform-payment
   [{:keys [resource
            id
@@ -123,7 +187,8 @@
            sequence-type
            customer-id
            mandate-id
-           subscription-id]
+           subscription-id
+           embedded]
     :as   payment}]
   (cond-> {::payment/resource      resource
            ::payment/id            id
@@ -182,6 +247,7 @@
                                                (spec/qualify-link (:mandates links)))
     (:change-payment-state links)       (assoc ::link/change-payment-state
                                                (spec/qualify-link (:change-payment-state links)))
+    (seq embedded)                      (assoc ::mollie/embedded (transform-embedded embedded))
     details                             (into (get-details payment))))
 
 (defn- create-generic
@@ -207,12 +273,16 @@
 
 (defn get-by-id
   "Fetch a single payment by `payment-id`."
-  [client payment-id]
-  (mollie.client/http-get client
-                          (str "/v2/payments/"
-                               (spec/check payment-id ::payment/id))
-                          {:response-transformer transform-payment
-                           :spec                 ::mollie/payment}))
+  [client payment-id {:keys [embed]}]
+  (let [embed-strs (into [] (map name) embed)
+        opts       (cond-> {:response-transformer transform-payment
+                            :spec                 ::mollie/payment}
+                     (seq embed-strs)
+                     (assoc :query-params {:embed (str/join \, embed-strs)}))]
+    (mollie.client/http-get client
+                            (str "/v2/payments/"
+                                 (spec/check payment-id ::payment/id))
+                            opts)))
 
 (defn update-by-id
   "Update a single payment by `payment-id`."
@@ -278,3 +348,108 @@
                              (spec/check customer-id ::customer/id)
                              (spec/check subscription-id ::subscription/id))
                      (spec/check opts ::pagination/opts))))
+
+(defn create-refund
+  "Create new payment refund."
+  [client payment-id refund]
+  (let [body (update-in refund [:amount :value] decimal/format)]
+    (mollie.client/http-post client
+                             (format "/v2/payments/%s/refunds"
+                                     (spec/check payment-id ::payment/id))
+                             {:response-transformer transform-refund
+                              :spec                 ::mollie/refund
+                              :body                 body})))
+
+(defn get-refund-by-id
+  "Returns single refund by `refund-id`."
+  [client payment-id refund-id]
+  (mollie.client/http-get client
+                          (format "/v2/payments/%s/refunds/%s"
+                                  (spec/check payment-id ::payment/id)
+                                  (spec/check refund-id ::refund/id))
+                          {:response-transformer transform-refund
+                           :spec                 ::mollie/refund}))
+
+(defn- transform-refunds
+  [response]
+  (let [refunds         (->> (get-in response [:embedded :refunds])
+                             (into [] (map transform-refund)))
+        next-params     (-> (get-in response [:links :next :href])
+                            (mollie.client/extract-page-params))
+        previous-params (-> (get-in response [:links :previous :href])
+                            (mollie.client/extract-page-params))
+        self-params     (-> (get-in response [:links :self :href])
+                            (mollie.client/extract-page-params))]
+    {::mollie/refunds      refunds
+     ::pagination/count    (:count response)
+     ::pagination/next     next-params
+     ::pagination/previous previous-params
+     ::pagination/self     self-params}))
+
+(defn get-refunds-list
+  "Fetch all payment refunds."
+  [client payment-id {:keys [from limit]}]
+  (let [fetch-fn (if limit
+                   mollie.client/http-get
+                   (partial mollie.client/fetch-all ::mollie/refunds))]
+    (fetch-fn client
+              (format "/v2/payments/%s/refunds"
+                      (spec/check payment-id ::payment/id))
+              {:response-transformer transform-refunds
+               :spec                 ::mollie/refunds-list
+               :query-params         (cond-> {}
+                                       from  (assoc :from from)
+                                       limit (assoc :limit limit))})))
+
+(defn cancel-refund-by-id
+  "Cancel a single refund by `refund-id`."
+  [client payment-id refund-id]
+  (mollie.client/http-delete client
+                             (format "/v2/payments/%s/refunds/%s"
+                                     (spec/check payment-id ::payment/id)
+                                     (spec/check refund-id ::refund/id))
+                             {}))
+
+(defn get-chargeback-by-id
+  "Returns single chargeback by `chargeback-id`."
+  [client payment-id chargeback-id]
+  (mollie.client/http-get client
+                          (format "/v2/payments/%s/chargebacks/%s"
+                                  (spec/check payment-id ::payment/id)
+                                  (spec/check chargeback-id ::chargeback/id))
+                          {:response-transformer transform-chargeback
+                           :spec                 ::mollie/chargeback}))
+
+(defn- transform-chargebacks
+  [response]
+  (let [chargebacks     (->> (get-in response [:embedded :chargebacks])
+                             (into [] (map transform-chargeback)))
+        next-params     (-> response
+                            (get-in [:links :next :href])
+                            (mollie.client/extract-page-params))
+        previous-params (-> response
+                            (get-in [:links :previous :href])
+                            (mollie.client/extract-page-params))
+        self-params     (-> response
+                            (get-in [:links :self :href])
+                            (mollie.client/extract-page-params))]
+    {::mollie/chargebacks  chargebacks
+     ::pagination/count    (:count response)
+     ::pagination/next     next-params
+     ::pagination/previous previous-params
+     ::pagination/self     self-params}))
+
+(defn get-chargebacks-list
+  "Fetch all payment chargebacks."
+  [client payment-id {:keys [from limit]}]
+  (let [fetch-fn (if limit
+                   mollie.client/http-get
+                   (partial mollie.client/fetch-all ::mollie/chargebacks))]
+    (fetch-fn client
+              (format "/v2/payments/%s/chargebacks"
+                      (spec/check payment-id ::payment/id))
+              {:response-transformer transform-chargebacks
+               :spec                 ::mollie/chargebacks-list
+               :query-params         (cond-> {}
+                                       from  (assoc :from from)
+                                       limit (assoc :limit limit))})))

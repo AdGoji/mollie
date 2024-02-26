@@ -11,7 +11,9 @@
    [com.adgoji.mollie.creditcard :as creditcard]
    [com.adgoji.mollie.paypal :as paypal]
    [com.adgoji.common :as common]
-   [com.adgoji.mollie.ideal :as ideal]))
+   [com.adgoji.mollie.ideal :as ideal]
+   [com.adgoji.mollie.refund :as refund]
+   [com.adgoji.mollie.chargeback :as chargeback]))
 
 ;;; Customer
 
@@ -40,6 +42,69 @@
                     :opt [::pagination/next
                           ::pagination/previous
                           ::pagination/self]))
+
+;;; Refunds
+
+(s/def ::refund
+  (common/only-keys :req [::refund/resource
+                          ::refund/id
+                          ::refund/amount
+                          ::refund/description
+                          ::refund/status
+                          ::refund/payment-id
+                          ::refund/created-at
+                          ::link/self
+                          ::link/payment]
+                    :opt [::refund/settlement-id
+                          ::refund/settlement-amount
+                          ::refund/lines
+                          ::refund/order-id
+                          ::refund/metadata
+                          ::link/documentation
+                          ::link/settlement
+                          ::link/order]))
+
+(s/def ::refunds
+  (s/coll-of ::refund :distinct true :into []))
+
+(s/def ::refunds-list
+  (common/only-keys :req [::refunds
+                          ::pagination/count]
+                    :opt [::pagination/next
+                          ::pagination/previous
+                          ::pagination/self]))
+
+;;; Chargebacks
+
+(s/def ::chargeback
+  (common/only-keys :req [::chargeback/resource
+                          ::chargeback/id
+                          ::chargeback/amount
+                          ::chargeback/settlement-amount
+                          ::chargeback/created-at
+                          ::chargeback/payment-id
+                          ::link/self
+                          ::link/payment]
+                    :opt [::chargeback/reason
+                          ::chargeback/reversed-at
+                          ::link/settlement
+                          ::link/documentation]))
+
+(s/def ::chargebacks
+  (s/coll-of ::chargeback :distinct true :into []))
+
+(s/def ::chargebacks-list
+  (common/only-keys :req [::chargebacks
+                          ::pagination/count]
+                    :opt [::pagination/next
+                          ::pagination/previous
+                          ::pagination/self]))
+
+;;; Embedded
+
+(s/def ::embedded
+  (common/only-keys :opt [::refunds
+                          ::chargebacks]))
 
 ;;; Payment
 
@@ -90,6 +155,7 @@
                           ::payment/customer-id
                           ::payment/mandate-id
                           ::payment/subscription-id
+                          ::embedded
                           ::directdebit/signature-date
                           ::directdebit/bank-reason-code
                           ::directdebit/bank-reason
@@ -148,6 +214,7 @@
                           ::payment/customer-id
                           ::payment/mandate-id
                           ::payment/subscription-id
+                          ::embedded
                           ::creditcard/card-holder
                           ::creditcard/card-number
                           ::creditcard/card-fingerprint
@@ -211,6 +278,7 @@
                           ::payment/customer-id
                           ::payment/mandate-id
                           ::payment/subscription-id
+                          ::embedded
                           ::ideal/consumer-name
                           ::ideal/consumer-account
                           ::ideal/consumer-bic
@@ -265,6 +333,7 @@
                           ::payment/customer-id
                           ::payment/mandate-id
                           ::payment/subscription-id
+                          ::embedded
                           ::link/checkout
                           ::link/mobile-app-checkout
                           ::link/refunds
@@ -288,6 +357,13 @@
                     :opt [::pagination/next
                           ::pagination/previous
                           ::pagination/self]))
+
+(s/def ::embed-val #{:captures
+                     :refunds
+                     :chargebacks})
+
+(s/def ::embed
+  (s/coll-of ::embed-val :into [] :distinct true))
 
 ;;; Mandate
 

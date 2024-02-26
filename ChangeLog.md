@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.4.0] - 2024-02-28 ##
+
+### Added ###
+
+- New option for getting payment by ID: `embed` ([#26](https://github.com/AdGoji/mollie/issues/26)).
+- New API: payment refunds ([#20](https://github.com/AdGoji/mollie/issues/20)).
+- New API: payment chargebacks ([#27](https://github.com/AdGoji/mollie/issues/27)).
+
 ## [0.3.6] - 2023-11-16 ##
 
 ### Fixed ###
@@ -86,7 +94,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.3.6..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.4.0..HEAD
+[0.4.0]: https://github.com/AdGoji/mollie/compare/0.3.6..0.4.0
 [0.3.6]: https://github.com/AdGoji/mollie/compare/0.3.5..0.3.6
 [0.3.5]: https://github.com/AdGoji/mollie/compare/0.3.4..0.3.5
 [0.3.4]: https://github.com/AdGoji/mollie/compare/0.3.3..0.3.4
