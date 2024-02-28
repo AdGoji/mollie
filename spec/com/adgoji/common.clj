@@ -1,6 +1,7 @@
 (ns com.adgoji.common
   (:require
-   [clojure.spec.alpha :as s]))
+   [clojure.spec.alpha :as s]
+   [com.adgoji.mollie.amount :as amount]))
 
 ;;; Constants
 
@@ -42,3 +43,4 @@
     :sofort})
 (s/def ::metadata (s/nilable map?))
 (s/def ::profile-id string?)            ;TODO: Use real profile ID when implemented
+(s/def ::amount (s/keys :req [::amount/value ::amount/currency]))

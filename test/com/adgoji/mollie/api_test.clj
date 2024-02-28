@@ -1,10 +1,11 @@
 (ns com.adgoji.mollie.api-test
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [com.adgoji.mollie.utils :as utils]
+   [cognitect.anomalies :as anomalies]
    [com.adgoji.mollie :as mollie]
    [com.adgoji.mollie.amount :as amount]
    [com.adgoji.mollie.api :as sut]
+   [com.adgoji.mollie.creditcard :as creditcard]
    [com.adgoji.mollie.customer :as customer]
    [com.adgoji.mollie.directdebit :as directdebit]
    [com.adgoji.mollie.link :as link]
@@ -12,8 +13,7 @@
    [com.adgoji.mollie.pagination :as pagination]
    [com.adgoji.mollie.payment :as payment]
    [com.adgoji.mollie.subscription :as subscription]
-   [cognitect.anomalies :as anomalies]
-   [com.adgoji.mollie.creditcard :as creditcard])
+   [com.adgoji.mollie.utils :as utils])
   (:import
    (clojure.lang ExceptionInfo)
    (java.time LocalDate)))
@@ -21,19 +21,23 @@
 (use-fixtures :once utils/with-mollie-client)
 
 (defn- ensure-customer []
-  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client* {})
+  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client*
+                                                  {:limit 50})
                           ::mollie/customers
                           seq)]
     (rand-nth customers)
     (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
 
 (defn- ensure-customer-without-mandate []
-  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client* {})
+  (if-let [customers (->> (sut/get-customers-list utils/*mollie-client*
+                                                  {:limit 50})
                           ::mollie/customers
                           (sequence (remove ::link/mandates))
                           seq)]
     (let [customer (rand-nth customers)]
-      (if-not (->> (sut/get-mandates-list utils/*mollie-client* (::customer/id customer) {})
+      (if-not (->> (sut/get-mandates-list utils/*mollie-client*
+                                          (::customer/id customer)
+                                          {:limit 50})
                    ::mollie/mandates
                    seq)
         customer
@@ -41,7 +45,9 @@
     (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
 
 (defn- ensure-mandate [customer-id]
-  (if-let [mandates (->> (sut/get-mandates-list utils/*mollie-client* customer-id {})
+  (if-let [mandates (->> (sut/get-mandates-list utils/*mollie-client*
+                                                customer-id
+                                                {:limit 50})
                          ::mollie/mandates
                          (sequence (filter #(= (::mandate/status %) :valid)))
                          seq)]
@@ -57,7 +63,9 @@
         customer-id  (::customer/id customer)
         mandate      (ensure-mandate customer-id)
         subscription (if-let [subscriptions
-                              (->> (sut/get-subscriptions-list utils/*mollie-client* customer-id {})
+                              (->> (sut/get-subscriptions-list utils/*mollie-client*
+                                                               customer-id
+                                                               {:limit 50})
                                    ::mollie/subscriptions
                                    (sequence (filter #(= (::subscription/status %) :active)))
                                    seq)]
@@ -77,7 +85,8 @@
 
 (defn- ensure-payment
   ([]
-   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* {})
+   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client*
+                                                 {:limit 50})
                           ::mollie/payments
                           seq)]
      (rand-nth payments)
@@ -88,7 +97,9 @@
                           :description  "Auto generated test payment"
                           :redirect-url "https://example.com"})))
   ([customer-id]
-   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* customer-id {})
+   (if-let [payments (->> (sut/get-payments-list utils/*mollie-client*
+                                                 customer-id
+                                                 {:limit 50})
                           ::mollie/payments
                           seq)]
      (rand-nth payments)
@@ -101,7 +112,8 @@
                          customer-id))))
 
 (defn- ensure-cancelable-payment []
-  (if-let [payments (->> (sut/get-payments-list utils/*mollie-client* {})
+  (if-let [payments (->> (sut/get-payments-list utils/*mollie-client*
+                                                {:limit 50})
                          ::mollie/payments
                          (sequence (filter ::payment/is-cancelable))
                          seq)]

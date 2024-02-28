@@ -6,7 +6,8 @@
    [com.adgoji.mollie.customer :as customer]
    [com.adgoji.mollie.payment :as payment]
    [com.adgoji.mollie.subscription :as subscription]
-   [com.adgoji.mollie.mandate :as mandate]))
+   [com.adgoji.mollie.mandate :as mandate]
+   [clojure.spec.test.alpha :as spec.test]))
 
 (def ^:private secrets-file "/.adgoji-mollie-secrets.edn")
 (def ^:private secrets
@@ -69,6 +70,7 @@
     (mollie.api/delete-customer-by-id *mollie-client* customer-id)))
 
 (defn with-mollie-client [f]
+  (spec.test/instrument)
   (binding [*mollie-client* (new-client)]
     (try
       (f)
