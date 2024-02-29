@@ -24,7 +24,13 @@
                 :scm       {:tag                 version
                             :connection          (str "scm:git:git://github.com/adgoji/mollie")
                             :developerConnection (str "scm:git:ssh://git@github.com:adgoji/mollie.git")
-                            :url                 "https://github.com/adgoji/mollie"}})
+                            :url                 "https://github.com/adgoji/mollie"}
+                :pom-data  [[:licenses
+                             [:license
+                              [:name "MIT"]
+                              [:url "https://opensource.org/license/mit/"]
+                              [:distribution "repo"]
+                              [:comments "The MIT License"]]]]})
   (println "Copy sources and resources")
   (b/copy-dir {:src-dirs   ["src" "spec"]
                :target-dir class-dir})
