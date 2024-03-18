@@ -15,7 +15,8 @@
    [com.adgoji.utils.spec :as spec]
    [com.adgoji.mollie.refund :as refund]
    [clojure.string :as str]
-   [com.adgoji.mollie.chargeback :as chargeback])
+   [com.adgoji.mollie.chargeback :as chargeback]
+   [camel-snake-kebab.core :as csk])
   (:import
    (java.time Instant LocalDate)))
 
@@ -72,7 +73,7 @@
     card-country-code (assoc ::creditcard/card-country-code card-country-code)
     card-security     (assoc ::creditcard/card-security (keyword card-security))
     fee-region        (assoc ::creditcard/fee-region fee-region)
-    failure-reason    (assoc ::creditcard/failure-reason (keyword failure-reason))
+    failure-reason    (assoc ::creditcard/failure-reason (csk/->kebab-case-keyword failure-reason))
     failure-message   (assoc ::creditcard/failure-message failure-message)
     wallet            (assoc ::creditcard/wallet (keyword wallet))))
 

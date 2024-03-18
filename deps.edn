@@ -1,6 +1,6 @@
 {:paths ["src" "spec"]
 
- :deps {org.clojure/clojure                 {:mvn/version "1.11.1"}
+ :deps {org.clojure/clojure                 {:mvn/version "1.11.2"}
         org.clojure/data.json               {:mvn/version "2.5.0"}
         org.clojure/spec.alpha              {:mvn/version "0.4.233"}
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
@@ -23,6 +23,6 @@
                          "--codecov"]}
 
            :build
-           {:deps       {io.github.clojure/tools.build {:mvn/version "0.9.6"}
+           {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.0"}
                          slipset/deps-deploy           {:mvn/version "0.2.2"}}
             :ns-default build}}}
