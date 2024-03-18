@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.4.1] - 2024-03-18 ##
+
+### Fixed ###
+
+- HTTP error code 429 is not handled properly ([#29](https://github.com/AdGoji/mollie/issues/29)).
+
 ## [0.4.0] - 2024-02-28 ##
 
 ### Added ###
@@ -94,7 +100,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Mandates management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 - Subscriptions management ([#1](https://github.com/AdGoji/mollie/issues/1)).
 
-[unreleased]: https://github.com/AdGoji/mollie/compare/0.4.0..HEAD
+[unreleased]: https://github.com/AdGoji/mollie/compare/0.4.1..HEAD
+[0.4.1]: https://github.com/AdGoji/mollie/compare/0.4.0..0.4.1
 [0.4.0]: https://github.com/AdGoji/mollie/compare/0.3.6..0.4.0
 [0.3.6]: https://github.com/AdGoji/mollie/compare/0.3.5..0.3.6
 [0.3.5]: https://github.com/AdGoji/mollie/compare/0.3.4..0.3.5

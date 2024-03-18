@@ -89,7 +89,7 @@
                        (404 410)         ::anomalies/not-found
                        405               ::anomalies/unsupported
                        500               ::anomalies/fault
-                       503               ::anomalies/busy)
+                       (429 503)         ::anomalies/busy)
              error   {::anomalies/category anomaly
                       :error               body}]
          (if throw-exceptions?
