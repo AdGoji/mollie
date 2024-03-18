@@ -24,15 +24,18 @@
   (if-let [customers (->> (sut/get-customers-list utils/*mollie-client*
                                                   {:limit 50})
                           ::mollie/customers
+                          (sequence utils/test-customer-xf)
                           seq)]
     (rand-nth customers)
-    (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
+    (sut/create-customer utils/*mollie-client*
+                         {:metadata utils/default-metadata})))
 
 (defn- ensure-customer-without-mandate []
   (if-let [customers (->> (sut/get-customers-list utils/*mollie-client*
                                                   {:limit 50})
                           ::mollie/customers
-                          (sequence (remove ::link/mandates))
+                          (sequence (comp (remove ::link/mandates)
+                                          utils/test-customer-xf))
                           seq)]
     (let [customer (rand-nth customers)]
       (if-not (->> (sut/get-mandates-list utils/*mollie-client*
@@ -42,7 +45,8 @@
                    seq)
         customer
         (recur)))
-    (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})))
+    (sut/create-customer utils/*mollie-client*
+                         {:metadata utils/default-metadata})))
 
 (defn- ensure-mandate [customer-id]
   (if-let [mandates (->> (sut/get-mandates-list utils/*mollie-client*

@@ -25,9 +25,14 @@
   (or (System/getenv "MOLLIE_PROFILE_ID")
       (:profile-id secrets)))
 
-(def test-purpose "api-client-test")
+(defonce test-execution-id (str (random-uuid)))
 
-(def default-metadata {:purpose test-purpose})
+(def default-metadata {:execution-id test-execution-id})
+
+(def test-customer-xf
+  (filter (fn [cus]
+            (= test-execution-id
+               (get-in cus [::customer/metadata :execution-id])))))
 
 (def ^:dynamic *mollie-client* nil)
 
@@ -60,8 +65,8 @@
 (defn- customers-to-cleaunup []
   (->> (mollie.api/get-customers-list *mollie-client* {})
        (::mollie/customers)
-       (sequence (filter (fn [customer]
-                           (= test-purpose (get-in customer [::customer/metadata :purpose])))))))
+       (sequence test-customer-xf)))
+
 (defn mollie-cleanup []
   (doseq [{customer-id ::customer/id} (customers-to-cleaunup)]
     (cleanup-payments customer-id)
