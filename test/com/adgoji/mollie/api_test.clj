@@ -13,7 +13,8 @@
    [com.adgoji.mollie.pagination :as pagination]
    [com.adgoji.mollie.payment :as payment]
    [com.adgoji.mollie.subscription :as subscription]
-   [com.adgoji.mollie.utils :as utils])
+   [com.adgoji.mollie.utils :as utils]
+   [hato.client :as hc])
   (:import
    (clojure.lang ExceptionInfo)
    (java.time LocalDate)))
@@ -131,6 +132,17 @@
                            :description   "Auto generated test payment"
                            :sequence-type :recurring}
                           customer-id))))
+
+(deftest exception-handling-test
+  (testing "IOException"
+    (with-redefs [hc/request (fn [_] (throw (java.io.IOException. "Connection reset")))]
+      (try
+        (sut/create-customer utils/*mollie-client* {:metadata utils/default-metadata})
+        (catch Exception e
+          (is (= "Mollie API error" (ex-message e)))
+          (is (= {::anomalies/category ::anomalies/fault
+                  :error               {:message "Connection reset"}}
+                 (ex-data e))))))))
 
 (deftest create-customer-test
   (testing "Create customer without data"
