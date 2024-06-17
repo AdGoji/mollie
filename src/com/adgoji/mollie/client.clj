@@ -60,19 +60,23 @@
          opts
 
          response
-         (-> (hc/request
-              (cond-> {:method            method
-                       :http-client       client
-                       :url               (str base-url endpoint)
-                       :content-type      :json
-                       :headers           {"authorization" (str "Bearer " api-key)}
-                       :as                :stream
-                       :throw-exceptions? false}
-                body         (assoc :body (json/write-str body
-                                                          {:key-fn   csk/->camelCaseString
-                                                           :value-fn write-json-value-fn}))
-                query-params (assoc :query-params query-params)))
-             (update :body parse-json))
+         (try
+           (-> (hc/request
+                (cond-> {:method            method
+                         :http-client       client
+                         :url               (str base-url endpoint)
+                         :content-type      :json
+                         :headers           {"authorization" (str "Bearer " api-key)}
+                         :as                :stream
+                         :throw-exceptions? false}
+                  body         (assoc :body (json/write-str body
+                                                            {:key-fn   csk/->camelCaseString
+                                                             :value-fn write-json-value-fn}))
+                  query-params (assoc :query-params query-params)))
+               (update :body parse-json))
+           (catch java.io.IOException ioe
+             {:status 500
+              :body   {:message (ex-message ioe)}}))
 
          status
          (:status response)
