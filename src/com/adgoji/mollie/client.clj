@@ -48,7 +48,8 @@
   ([method req endpoint]
    (request method req endpoint {}))
   ([method
-    {:keys [client base-url
+    {:keys [client
+            base-url
             api-key
             check-response?
             throw-exceptions?]}
