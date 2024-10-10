@@ -146,8 +146,14 @@ parameters - `from` and `limit`. Both parameters are optional:
   - [x] Delete subscription by ID
   - [x] Get list of subscriptions
 - [ ] Methods
-- [ ] Refunds
-- [ ] Chargebacks
+- [x] Refunds
+  - [x] Create refund
+  - [x] Get refund by ID
+  - [x] Cancel refund by ID
+  - [x] Get list of refunds
+- [x] Chargebacks
+  - [x] Get chargeback by ID
+  - [x] Get list of chargebacks
 - [ ] Captures
 - [ ] Orders
 - [ ] Shipments
