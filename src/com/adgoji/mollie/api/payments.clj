@@ -16,7 +16,9 @@
    [com.adgoji.mollie.refund :as refund]
    [clojure.string :as str]
    [com.adgoji.mollie.chargeback :as chargeback]
-   [camel-snake-kebab.core :as csk])
+   [camel-snake-kebab.core :as csk]
+   [com.adgoji.mollie.paypal :as paypal]
+   [com.adgoji.mollie.banktransfer :as banktransfer])
   (:import
    (java.time Instant LocalDate)))
 
@@ -85,6 +87,28 @@
     consumer-name    (assoc ::ideal/consumer-name consumer-name)
     consumer-account (assoc ::ideal/consumer-account consumer-account)
     consumer-bic     (assoc ::ideal/consumer-bic consumer-bic)))
+
+(defmethod get-details :paypal
+  [{{:keys [paypal-reference
+            paypal-payer-id
+            seller-protection
+            paypal-fee]} :details}]
+  (cond-> {}
+    paypal-reference  (assoc ::paypal/paypal-reference paypal-reference)
+    paypal-payer-id   (assoc ::paypal/paypal-payer-id paypal-payer-id)
+    seller-protection (assoc ::paypal/seller-protection seller-protection)
+    paypal-fee        (assoc ::paypal/paypal-fee (spec/qualify-amount paypal-fee))))
+
+(defmethod get-details :banktransfer
+  [{{:keys [bank-account
+            bank-bic
+            bank-name
+            transfer-reference]} :details}]
+  (cond-> {}
+    bank-account       (assoc ::banktransfer/bank-account bank-account)
+    bank-bic           (assoc ::banktransfer/bank-bic bank-bic)
+    bank-name          (assoc ::banktransfer/bank-name bank-name)
+    transfer-reference (assoc ::banktransfer/transfer-reference transfer-reference)))
 
 (defmethod get-details ::default
   [{:keys [method]}]

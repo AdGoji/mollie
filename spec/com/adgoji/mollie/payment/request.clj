@@ -4,7 +4,8 @@
    [com.adgoji.common :as common]
    [com.adgoji.mollie.amount :as amount]
    [com.adgoji.mollie.customer :as customer]
-   [com.adgoji.mollie.mandate :as mandate])
+   [com.adgoji.mollie.mandate :as mandate]
+   [com.adgoji.mollie.paypal :as paypal])
   (:import
    (java.time LocalDate)))
 
@@ -53,7 +54,9 @@
                              ::issuer
                              ::billing-email
                              ::due-date
-                             ::profile-id]))
+                             ::profile-id
+                             ::paypal/session-id
+                             ::paypal/digital-goods]))
 
 (defmulti create-spec :sequence-type)
 
@@ -81,7 +84,9 @@
                              ::issuer
                              ::billing-email
                              ::due-date
-                             ::profile-id]))
+                             ::profile-id
+                             ::paypal/session-id
+                             ::paypal/digital-goods]))
 
 (defmethod create-spec :recurring
   [_]
@@ -100,7 +105,9 @@
                              ::issuer
                              ::billing-email
                              ::due-date
-                             ::profile-id]))
+                             ::profile-id
+                             ::paypal/session-id
+                             ::paypal/digital-goods]))
 
 (s/def ::create (s/multi-spec create-spec :sequence-type))
 

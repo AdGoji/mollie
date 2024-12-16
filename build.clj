@@ -4,7 +4,7 @@
    [deps-deploy.deps-deploy :as dd]))
 
 (def lib 'com.adgoji/mollie)
-(def version "0.4.4")
+(def version "0.5.0")
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/%s-%s.jar" (name lib) version))
@@ -22,8 +22,8 @@
                 :basis     basis
                 :src-dirs  ["src" "spec"]
                 :scm       {:tag                 version
-                            :connection          (str "scm:git:git://github.com/adgoji/mollie")
-                            :developerConnection (str "scm:git:ssh://git@github.com:adgoji/mollie.git")
+                            :connection          "scm:git:git://github.com/adgoji/mollie"
+                            :developerConnection "scm:git:ssh://git@github.com:adgoji/mollie.git"
                             :url                 "https://github.com/adgoji/mollie"}
                 :pom-data  [[:licenses
                              [:license
