@@ -294,6 +294,62 @@
                           ::link/subscription
                           ::link/customer]))
 
+(defmethod payment-spec :paypal
+  [_]
+  (common/only-keys :req [::payment/resource
+                          ::payment/id
+                          ::payment/mode
+                          ::payment/created-at
+                          ::payment/status
+                          ::payment/amount
+                          ::payment/description
+                          ::payment/redirect-url
+                          ::payment/method
+                          ::payment/profile-id
+                          ::link/self
+                          ::link/dashboard
+                          ::link/documentation]
+                    :opt [::payment/is-cancelable
+                          ::payment/authorized-at
+                          ::payment/paid-at
+                          ::payment/canceled-at
+                          ::payment/expires-at
+                          ::payment/expired-at
+                          ::payment/failed-at
+                          ::payment/amount-refunded
+                          ::payment/amount-remaining
+                          ::payment/amount-captured
+                          ::payment/amount-charged-back
+                          ::payment/settlement-amount
+                          ::payment/cancel-url
+                          ::payment/webhook-url
+                          ::payment/locale
+                          ::payment/country-code
+                          ::payment/restrict-payment-methods-to-country
+                          ::payment/metadata
+                          ::payment/settlement-id
+                          ::payment/order-id
+                          ::payment/sequence-type
+                          ::payment/customer-id
+                          ::payment/mandate-id
+                          ::payment/subscription-id
+                          ::embedded
+                          ::paypal/paypal-reference
+                          ::paypal/paypal-payer-id
+                          ::paypal/seller-protection
+                          ::paypal/paypal-fee
+                          ::link/checkout
+                          ::link/mobile-app-checkout
+                          ::link/refunds
+                          ::link/chargebacks
+                          ::link/captures
+                          ::link/settlement
+                          ::link/order
+                          ::link/change-payment-state
+                          ::link/mandate
+                          ::link/subscription
+                          ::link/customer]))
+
 (defmethod payment-spec nil
   [_]
   (common/only-keys :req [::payment/resource
