@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added ###
 
 - PayPal support ([#37](https://github.com/AdGoji/mollie/issues/37)).
+- Bank transfers support ([#39](https://github.com/AdGoji/mollie/issues/39)).
 
 ## [0.4.4] - 2024-11-14 ##
 

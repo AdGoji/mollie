@@ -13,7 +13,8 @@
    [com.adgoji.common :as common]
    [com.adgoji.mollie.ideal :as ideal]
    [com.adgoji.mollie.refund :as refund]
-   [com.adgoji.mollie.chargeback :as chargeback]))
+   [com.adgoji.mollie.chargeback :as chargeback]
+   [com.adgoji.mollie.banktransfer :as banktransfer]))
 
 ;;; Customer
 
@@ -338,6 +339,62 @@
                           ::paypal/paypal-payer-id
                           ::paypal/seller-protection
                           ::paypal/paypal-fee
+                          ::link/checkout
+                          ::link/mobile-app-checkout
+                          ::link/refunds
+                          ::link/chargebacks
+                          ::link/captures
+                          ::link/settlement
+                          ::link/order
+                          ::link/change-payment-state
+                          ::link/mandate
+                          ::link/subscription
+                          ::link/customer]))
+
+(defmethod payment-spec :banktransfer
+  [_]
+  (common/only-keys :req [::payment/resource
+                          ::payment/id
+                          ::payment/mode
+                          ::payment/created-at
+                          ::payment/status
+                          ::payment/amount
+                          ::payment/description
+                          ::payment/redirect-url
+                          ::payment/method
+                          ::payment/profile-id
+                          ::link/self
+                          ::link/dashboard
+                          ::link/documentation]
+                    :opt [::payment/is-cancelable
+                          ::payment/authorized-at
+                          ::payment/paid-at
+                          ::payment/canceled-at
+                          ::payment/expires-at
+                          ::payment/expired-at
+                          ::payment/failed-at
+                          ::payment/amount-refunded
+                          ::payment/amount-remaining
+                          ::payment/amount-captured
+                          ::payment/amount-charged-back
+                          ::payment/settlement-amount
+                          ::payment/cancel-url
+                          ::payment/webhook-url
+                          ::payment/locale
+                          ::payment/country-code
+                          ::payment/restrict-payment-methods-to-country
+                          ::payment/metadata
+                          ::payment/settlement-id
+                          ::payment/order-id
+                          ::payment/sequence-type
+                          ::payment/customer-id
+                          ::payment/mandate-id
+                          ::payment/subscription-id
+                          ::embedded
+                          ::banktransfer/bank-account
+                          ::banktransfer/bank-bic
+                          ::banktransfer/bank-name
+                          ::banktransfer/transfer-reference
                           ::link/checkout
                           ::link/mobile-app-checkout
                           ::link/refunds

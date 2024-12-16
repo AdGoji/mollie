@@ -22,8 +22,8 @@
                 :basis     basis
                 :src-dirs  ["src" "spec"]
                 :scm       {:tag                 version
-                            :connection          (str "scm:git:git://github.com/adgoji/mollie")
-                            :developerConnection (str "scm:git:ssh://git@github.com:adgoji/mollie.git")
+                            :connection          "scm:git:git://github.com/adgoji/mollie"
+                            :developerConnection "scm:git:ssh://git@github.com:adgoji/mollie.git"
                             :url                 "https://github.com/adgoji/mollie"}
                 :pom-data  [[:licenses
                              [:license
