@@ -565,32 +565,38 @@
                (dissoc ::payment/settlement-amount
                        ::payment/is-cancelable
                        ::payment/canceled-at
-                       ::link/change-payment-state))
+                       ::payment/expires-at
+                       ::link/change-payment-state
+                       ::link/checkout))
            (dissoc canceled ::payment/canceled-at)))))
 
 (deftest get-payments-list-test
-  (testing "Fetch full list of payments"
-    (ensure-payment)
-    (let [response (sut/get-payments-list utils/*mollie-client* {})]
-      (is (pos-int? (::pagination/count response)))
-      (is (nil? (::pagination/next response)))
-      (is (nil? (::pagination/previous response)))
-      (is (nil? (::pagination/self response)))
-      (is (vector? (::mollie/payments response)))
-      (is (= (count (::mollie/payments response))
-             (::pagination/count response)))))
+  ;; NOTE: This is an extremely slow test due to the huge amount of
+  ;; test payments. It's better to disable it.
+  #_(testing "Fetch full list of payments"
+      (ensure-payment)
+      (let [response (sut/get-payments-list utils/*mollie-client* {})]
+        (is (pos-int? (::pagination/count response)))
+        (is (nil? (::pagination/next response)))
+        (is (nil? (::pagination/previous response)))
+        (is (nil? (::pagination/self response)))
+        (is (vector? (::mollie/payments response)))
+        (is (= (count (::mollie/payments response))
+               (::pagination/count response)))))
 
   (testing "Fetch with `limit` parameter"
     (ensure-payment)
     (let [response (sut/get-payments-list utils/*mollie-client* {:limit 1})]
       (is (= 1 (::pagination/count response) (count (::mollie/payments response))))))
 
-  (testing "Fetch with `from` parameter"
-    (let [payment  (ensure-payment)
-          response (sut/get-payments-list
-                    utils/*mollie-client*
-                    {:from (::payment/id payment)})]
-      (is (= payment (first (::mollie/payments response))))))
+  ;; NOTE: This is an extremely slow test due to the huge amount of
+  ;; test payments. It's better to disable it.
+  #_(testing "Fetch with `from` parameter"
+      (let [payment  (ensure-payment)
+            response (sut/get-payments-list
+                      utils/*mollie-client*
+                      {:from (::payment/id payment)})]
+        (is (= payment (first (::mollie/payments response))))))
 
   (testing "Fetch with both `from` and `limit` parameters"
     (let [payment  (ensure-payment)

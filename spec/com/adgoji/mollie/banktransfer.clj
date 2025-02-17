@@ -6,3 +6,4 @@
 (s/def ::bank-account string?)
 (s/def ::bank-bic string?)
 (s/def ::transfer-reference string?)
+(s/def ::due-date (partial instance? java.time.LocalDate))
