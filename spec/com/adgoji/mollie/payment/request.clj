@@ -3,11 +3,11 @@
    [clojure.spec.alpha :as s]
    [com.adgoji.common :as common]
    [com.adgoji.mollie.amount :as amount]
+   [com.adgoji.mollie.banktransfer :as banktransfer]
+   [com.adgoji.mollie.billing-address :as billing-address]
    [com.adgoji.mollie.customer :as customer]
    [com.adgoji.mollie.mandate :as mandate]
-   [com.adgoji.mollie.paypal :as paypal])
-  (:import
-   (java.time LocalDate)))
+   [com.adgoji.mollie.paypal :as paypal]))
 
 (s/def ::amount (s/keys :req-un [::amount/currency ::amount/value]))
 (s/def ::description string?)
@@ -36,7 +36,20 @@
 (s/def ::issuer string?)
 (s/def ::profile-id ::common/profile-id)
 (s/def ::billing-email ::common/email)
-(s/def ::due-date (partial instance? LocalDate))
+
+(s/def ::billing-address
+  (common/only-keys :opt-un [::billing-address/title
+                             ::billing-address/given-name
+                             ::billing-address/family-name
+                             ::billing-address/organization-name
+                             ::billing-address/street-and-number
+                             ::billing-address/street-additional
+                             ::billing-address/postal-code
+                             ::billing-address/email
+                             ::billing-address/phone
+                             ::billing-address/city
+                             ::billing-address/region
+                             ::billing-address/country]))
 
 (s/def ::create-oneoff
   (common/only-keys :req-un [::amount
@@ -53,8 +66,9 @@
                              ::mandate-id
                              ::issuer
                              ::billing-email
-                             ::due-date
+                             ::banktransfer/due-date
                              ::profile-id
+                             ::billing-address
                              ::paypal/session-id
                              ::paypal/digital-goods]))
 
@@ -83,8 +97,9 @@
                              ::mandate-id
                              ::issuer
                              ::billing-email
-                             ::due-date
+                             ::banktransfer/due-date
                              ::profile-id
+                             ::billing-address
                              ::paypal/session-id
                              ::paypal/digital-goods]))
 
@@ -104,8 +119,9 @@
                              ::mandate-id
                              ::issuer
                              ::billing-email
-                             ::due-date
+                             ::banktransfer/due-date
                              ::profile-id
+                             ::billing-address
                              ::paypal/session-id
                              ::paypal/digital-goods]))
 
@@ -122,4 +138,5 @@
                              ::metadata
                              ::issuer
                              ::billing-email
-                             ::due-date]))
+                             ::banktransfer/due-date
+                             ::billing-address]))
