@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased] ##
 
+## [0.6.1] - 2025-09-08 ##
+
+### Fixed ###
+
+- Incorrect parser for credit card expiration date ([#42](https://github.com/AdGoji/mollie/issues/42)).
+
 ## [0.6.0] - 2025-02-18 ##
 
 ### Added ###
