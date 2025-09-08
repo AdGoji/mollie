@@ -1,6 +1,10 @@
 (ns com.adgoji.mollie.api.payments
   (:require
+   [camel-snake-kebab.core :as csk]
+   [clojure.string :as str]
    [com.adgoji.mollie :as mollie]
+   [com.adgoji.mollie.banktransfer :as banktransfer]
+   [com.adgoji.mollie.chargeback :as chargeback]
    [com.adgoji.mollie.client :as mollie.client]
    [com.adgoji.mollie.creditcard :as creditcard]
    [com.adgoji.mollie.customer :as customer]
@@ -10,17 +14,14 @@
    [com.adgoji.mollie.pagination :as pagination]
    [com.adgoji.mollie.payment :as payment]
    [com.adgoji.mollie.payment.request :as payment.request]
+   [com.adgoji.mollie.paypal :as paypal]
+   [com.adgoji.mollie.refund :as refund]
    [com.adgoji.mollie.subscription :as subscription]
    [com.adgoji.utils.decimal :as decimal]
-   [com.adgoji.utils.spec :as spec]
-   [com.adgoji.mollie.refund :as refund]
-   [clojure.string :as str]
-   [com.adgoji.mollie.chargeback :as chargeback]
-   [camel-snake-kebab.core :as csk]
-   [com.adgoji.mollie.paypal :as paypal]
-   [com.adgoji.mollie.banktransfer :as banktransfer])
+   [com.adgoji.utils.spec :as spec])
   (:import
-   (java.time Instant LocalDate)))
+   (java.time Instant LocalDate YearMonth)
+   (java.time.format DateTimeFormatter)))
 
 (defmulti get-details (comp keyword :method) :default ::default)
 
@@ -52,6 +53,12 @@
     batch-reference       (assoc ::directdebit/batch-reference batch-reference)
     file-reference        (assoc ::directdebit/file-reference file-reference)))
 
+(defn- parse-expiry-date
+  [date]
+  (-> date
+      (YearMonth/parse (DateTimeFormatter/ofPattern "MM/yy"))
+      (YearMonth/.atDay 1)))
+
 (defmethod get-details :creditcard
   [{{:keys [card-holder
             card-number
@@ -69,7 +76,7 @@
     card-holder       (assoc ::creditcard/card-holder card-holder)
     card-number       (assoc ::creditcard/card-number card-number)
     card-fingerprint  (assoc ::creditcard/card-fingerprint card-fingerprint)
-    card-expiry-date  (assoc ::creditcard/card-expiry-date (LocalDate/parse card-expiry-date))
+    card-expiry-date  (assoc ::creditcard/card-expiry-date (parse-expiry-date card-expiry-date))
     card-audience     (assoc ::creditcard/card-audience (keyword card-audience))
     card-label        (assoc ::creditcard/card-label card-label)
     card-country-code (assoc ::creditcard/card-country-code card-country-code)
